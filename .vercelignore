@@ -32,3 +32,10 @@ morss.service
 # Development
 .pylintrc
 .gitignore
+setup.py
+morss-helper
+
+# Temporary files
+*.log
+*.cache
+cache/

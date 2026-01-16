@@ -5,9 +5,21 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "www/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/www/(.*)",
+      "dest": "/www/$1"
+    },
+    {
+      "src": "/(index\\.html|xpath-selector\\.html|.*\\.(css|js|svg|xsl|md))",
+      "dest": "/www/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/api/index.py"
