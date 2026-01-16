@@ -19,22 +19,34 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Vercel serverless function entry point for Morss
-This module adapts the WSGI application for Vercel's serverless environment
+Vercel serverless function entry point for Morss.
+
+This module provides a WSGI-compatible handler for Vercel's Python runtime.
+The handler uses late-binding imports to avoid exposing module-level classes
+from morss.wsgi in the handler's __globals__, which would trigger a bug in
+Vercel's runtime where it calls issubclass() on non-class objects.
 """
 
-# Import sys and os at module level for path manipulation
-import sys as _sys
-import os as _os
 
-# Add parent directory to path to import morss module
-_sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..'))
-
-# Import the WSGI application as 'handler' for Vercel
-# Note: Use __all__ and prefixed imports to avoid Vercel's issubclass() TypeError
-# Vercel's runtime inspects module attributes and calls issubclass() without
-# checking if they're classes first, causing "TypeError: issubclass() arg 1 must be a class"
-from morss.wsgi import application as handler
-
-# Explicitly declare what should be exported - only the handler function
-__all__ = ['handler']
+def handler(environ, start_response):
+    """
+    WSGI application handler for Vercel.
+    
+    Args:
+        environ: WSGI environment dict
+        start_response: WSGI start_response callable
+        
+    Returns:
+        WSGI response iterable
+    """
+    # Import everything inside the function to keep module namespace minimal
+    import sys
+    import os
+    
+    # Add parent directory to path to import morss module
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    
+    # Import morss application
+    from morss.wsgi import application
+    
+    return application(environ, start_response)
