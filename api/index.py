@@ -23,18 +23,31 @@ Vercel serverless function entry point for Morss.
 
 This module provides a clean WSGI application entry point for Vercel's Python runtime.
 
-Why this simple approach works:
-1. Vercel looks for a variable named "app" or "handler" in the entry point file
-2. The problematic WSGIRequestHandlerRequestUri class (which inherits from 
-   BaseHTTPRequestHandler) is defined in morss.wsgi, not in this file
-3. Vercel's runtime only inspects the entry point file's globals for HTTP handler
-   classes, not the globals of imported modules
-4. By directly importing and exposing the WSGI application, we keep this file
-   simple and avoid the issubclass() inspection issues
+IMPORTANT: Why the isolation of WSGIRequestHandlerRequestUri matters:
 
-Previous attempts using exec() and namespace isolation were overly complex and
-still failed because Vercel could detect referenced classes through various means.
-The simplest solution is the most reliable.
+Vercel's Python runtime (/var/task/vc__handler__python.py) inspects the handler module
+and checks if any objects in the module's namespace are subclasses of BaseHTTPRequestHandler.
+The inspection code looks something like:
+
+    for base in some_collection:
+        if not issubclass(base, BaseHTTPRequestHandler):
+            ...
+
+The problem: When importing the WSGI application from morss.wsgi, if the
+WSGIRequestHandlerRequestUri class (which inherits from BaseHTTPRequestHandler) is
+defined in the same module, it ends up in the application function's __globals__
+dictionary. Vercel's runtime then encounters this class during inspection, which
+can cause a "TypeError: issubclass() arg 1 must be a class" error.
+
+The solution:
+1. WSGIRequestHandlerRequestUri is now isolated in morss/server.py
+2. It's only imported locally within cgi_start_server() for standalone server mode
+3. The WSGI application's __globals__ no longer contains BaseHTTPRequestHandler subclasses
+4. Vercel's runtime can safely load and inspect the handler module
+5. The application works correctly in both serverless (Vercel) and standalone modes
+
+This approach keeps the code simple while ensuring compatibility with Vercel's
+serverless runtime inspection mechanism.
 """
 
 import sys
