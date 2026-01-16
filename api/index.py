@@ -43,8 +43,10 @@ def handler(environ, start_response):
     import sys
     import os
     
-    # Add parent directory to path to import morss module
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    # Add parent directory to path to import morss module (only if not already present)
+    parent_dir = os.path.join(os.path.dirname(__file__), '..')
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
     
     # Import morss application
     from morss.wsgi import application
