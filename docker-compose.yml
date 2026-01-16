@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  morss:
+    image: pictuga/morss
+    container_name: morss
+    ports:
+      - "8000:8000"
+    environment:
+      # 调试模式（生产环境建议关闭）
+      # Debug mode (recommended to disable in production)
+      - DEBUG=0
+      
+      # 缓存配置 / Cache configuration
+      - CACHE=diskcache
+      - CACHE_SIZE=1073741824  # 1GB
+      - DISKCACHE_DIR=/cache
+      
+      # 性能配置 / Performance configuration
+      - MAX_ITEM=100
+      - MAX_TIME=60
+      - TIMEOUT=15
+      
+      # Gunicorn 配置 / Gunicorn configuration
+      - GUNICORN_CMD_ARGS=--workers=4 --timeout=120
+    volumes:
+      # 持久化缓存 / Persistent cache
+      - ./morss-cache:/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/app/morss-helper", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 可选：Redis 缓存服务（如需使用请取消注释）
+  # Optional: Redis cache service (uncomment if needed)
+  # redis:
+  #   image: redis:alpine
+  #   container_name: morss-redis
+  #   volumes:
+  #     - ./redis-data:/data
+  #   restart: unless-stopped

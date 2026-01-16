@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "name": "morss",
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ],
+  "env": {
+    "MAX_ITEM": "30",
+    "MAX_TIME": "20",
+    "TIMEOUT": "8",
+    "LIM_TIME": "25",
+    "LIM_ITEM": "50"
+  }
+}

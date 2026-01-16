@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>morss</title>
+		<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0;" />
+		<meta charset="UTF-8" />
+		<link rel="shortcut icon" type="image/svg+xml" href="/logo.svg" sizes="any" />
+		<style type="text/css">
+			body
+			{
+				padding : 2%;
+				margin : auto;
+				margin-top : 10px;
+				margin-bottom : 10px;
+				min-width: 70%;
+				max-width: 70px;
+				text-align : center;
+			}
+
+			input
+			{
+				display: block;
+				min-width: 50%;
+				margin: auto;
+				margin-top: 1em;
+				text-align : center;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>morss</h1>
+
+		<p>Fill your RSS feeds.</p>
+		<form>
+			<input type="text" id="url" name="url" placeholder="Feed url (http://example.com/feed.xml)" />
+		</form>
+
+		<p style="margin-top: 2em;">
+			<a href="/xpath-selector.html" style="color: #4CAF50; text-decoration: none; font-weight: bold;">
+				🎯 XPath 选择器工具
+			</a>
+			<br/>
+			<span style="font-size: 0.9em; color: #666;">
+				通过可视化方式创建自定义 RSS 订阅源
+			</span>
+		</p>
+
+		<code>Copyright: pictuga 2013-2020<br/>
+		Source code: https://git.pictuga.com/pictuga/morss</code>
+
+		<script>
+			form = document.forms[0]
+			form.addEventListener('submit', function(e)
+				{
+					console.log('lol');
+					url = form.elements[0].value.replace(/^https?:\/\/?/, '')
+					document.location = "./" + url;
+					e.preventDefault();
+				});
+		</script>
+	</body>
+</html>

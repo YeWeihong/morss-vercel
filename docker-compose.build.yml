@@ -1,0 +1,41 @@
+version: '3.8'
+
+# 本配置文件用于从源码构建 Morss（本 fork 版本）
+# This configuration builds Morss from source (this fork version)
+# 
+# 使用方法 / Usage:
+#   docker-compose -f docker-compose.build.yml build
+#   docker-compose -f docker-compose.build.yml up -d
+
+services:
+  morss:
+    build: .
+    image: morss:custom
+    container_name: morss-custom
+    ports:
+      - "8000:8000"
+    environment:
+      # 调试模式 / Debug mode
+      - DEBUG=0
+      
+      # 缓存配置 / Cache configuration
+      - CACHE=diskcache
+      - CACHE_SIZE=1073741824  # 1GB
+      - DISKCACHE_DIR=/cache
+      
+      # 性能配置 / Performance configuration
+      - MAX_ITEM=100
+      - MAX_TIME=60
+      - TIMEOUT=15
+      
+      # Gunicorn 配置 / Gunicorn configuration
+      - GUNICORN_CMD_ARGS=--workers=4 --timeout=120
+    volumes:
+      # 持久化缓存 / Persistent cache
+      - ./morss-cache:/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/app/morss-helper", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

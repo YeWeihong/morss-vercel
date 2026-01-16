@@ -1,0 +1,21 @@
+{
+	"stack": "container",
+	"env": {
+		"DEBUG": {
+			"value": 1,
+			"required": false
+		},
+		"GUNICORN_CMD_ARGS": {
+			"value": "",
+			"required": false
+		},
+		"CACHE": {
+			"value": "diskcache",
+			"required": false
+		},
+		"CACHE_SIZE": {
+			"value": 1073741824,
+			"required": false
+		}
+	}
+}

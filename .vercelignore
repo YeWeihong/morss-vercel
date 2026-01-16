@@ -1,0 +1,34 @@
+# Git
+.git
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Tests
+tests/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation (keep essential docs)
+*.md
+!README.md
+!VERCEL_DEPLOYMENT_CN.md
+
+# CI/CD for other platforms
+heroku.yml
+app.json
+morss.service
+
+# Development
+.pylintrc
+.gitignore

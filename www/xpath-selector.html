@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XPath 选择器工具 - Morss</title>
+    <link rel="shortcut icon" type="image/svg+xml" href="/logo.svg" sizes="any" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .description {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .button-secondary {
+            background-color: #2196F3;
+        }
+        
+        .button-secondary:hover {
+            background-color: #0b7dda;
+        }
+        
+        .button-danger {
+            background-color: #f44336;
+        }
+        
+        .button-danger:hover {
+            background-color: #da190b;
+        }
+        
+        .iframe-container {
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            background: white;
+        }
+        
+        .iframe-header {
+            background: #f8f8f8;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: block;
+        }
+        
+        .output-section {
+            margin-top: 30px;
+        }
+        
+        .xpath-rule {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .xpath-rule h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .xpath-value {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            border: 1px solid #ddd;
+        }
+        
+        .copy-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .morss-url {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .morss-url h3 {
+            margin: 0 0 10px 0;
+            color: #1976D2;
+            font-size: 16px;
+        }
+        
+        .url-value {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            border: 1px solid #90caf9;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .instructions h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+        
+        .instructions ol {
+            margin: 10px 0 0 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            color: #856404;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+        
+        .help-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 30px;
+        }
+        
+        .help-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .help-section p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .help-section a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        
+        .help-section a:hover {
+            text-decoration: underline;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .selection-mode {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 XPath 选择器工具</h1>
+        <p class="description">
+            通过可视化方式选择网页元素，自动生成 XPath 规则，轻松创建自定义 RSS 订阅源
+        </p>
+        
+        <div class="instructions">
+            <h3>📖 使用说明</h3>
+            <p><strong>方式一：直接加载网页（推荐）</strong></p>
+            <ol>
+                <li>在下方输入框中输入你想要抓取的网页 URL</li>
+                <li>点击"加载网页"按钮</li>
+                <li>按照提示，依次点击页面上的元素来选择：
+                    <ul>
+                        <li><strong>订阅项（items）</strong>：所有文章/条目的共同父元素（必选）</li>
+                        <li><strong>标题（title）</strong>：文章标题的位置</li>
+                        <li><strong>链接（link）</strong>：文章链接的位置</li>
+                        <li><strong>内容（content）</strong>：文章摘要或内容</li>
+                    </ul>
+                </li>
+                <li>自动生成的 XPath 规则和 Morss URL 会显示在下方</li>
+            </ol>
+            <p><strong>方式二：手动输入 XPath（适用于 CORS 限制的网站）</strong></p>
+            <ol>
+                <li>点击"手动输入 XPath"按钮</li>
+                <li>在浏览器中打开目标网页，按 F12 打开开发者工具</li>
+                <li>使用元素选择器选中页面元素，右键 → 复制 → 复制 XPath</li>
+                <li>将 XPath 粘贴到对应的输入框中</li>
+                <li>系统会自动优化 XPath 并生成 Morss URL</li>
+            </ol>
+        </div>
+        
+        <div class="alert alert-warning">
+            <strong>⚠️ 注意：</strong>由于浏览器安全限制（CORS），部分网站可能无法在此工具中直接加载。
+            对于这些网站，你可以使用浏览器开发者工具（F12）手动获取 XPath，然后使用下方的"手动输入 XPath"功能。
+            详见<a href="/XPATH_CUSTOM_FEEDS_CN.md" target="_blank">《XPath 自定义规则详解》</a>
+        </div>
+        
+        <div class="input-section">
+            <label for="targetUrl">目标网页 URL：</label>
+            <input type="text" id="targetUrl" placeholder="https://example.com/blog" />
+            <button onclick="loadPage()">加载网页</button>
+            <button class="button-secondary" onclick="showManualInput()">✋ 手动输入 XPath</button>
+        </div>
+        
+        <div id="manualInputSection" class="hidden" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; border: 2px solid #4CAF50;">
+            <h2 style="margin-top: 0; color: #4CAF50;">📝 手动输入 XPath 模式</h2>
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <strong>💡 使用方法：</strong>
+                <ol style="margin: 10px 0 0 0; padding-left: 20px;">
+                    <li>在浏览器中打开目标网页，按 F12 打开开发者工具</li>
+                    <li>点击"元素选择器"（或按 Ctrl+Shift+C）</li>
+                    <li>点击页面上要抓取的元素</li>
+                    <li>在开发者工具中，右键点击高亮的 HTML 元素 → 复制 → 复制 XPath</li>
+                    <li>将复制的 XPath 粘贴到下面对应的输入框中</li>
+                    <li>系统会自动优化 XPath 并生成 Morss URL</li>
+                </ol>
+            </div>
+            
+            <div class="input-section">
+                <label for="manualItems">
+                    <strong style="color: #d32f2f;">*</strong> 订阅项容器 (items) - 必填：
+                    <span style="font-size: 12px; color: #666; font-weight: normal;">选择所有文章/条目的共同父元素</span>
+                </label>
+                <textarea id="manualItems" rows="2" placeholder="例如：/html/body/div[1]/div[2]/div[@class='post']"></textarea>
+            </div>
+            
+            <div class="input-section">
+                <label for="manualTitle">
+                    标题 (item_title) - 可选：
+                    <span style="font-size: 12px; color: #666; font-weight: normal;">文章标题的位置（相对于 items）</span>
+                </label>
+                <textarea id="manualTitle" rows="2" placeholder="例如：.//h2/a 或 ./div[@class='title']"></textarea>
+            </div>
+            
+            <div class="input-section">
+                <label for="manualLink">
+                    链接 (item_link) - 可选：
+                    <span style="font-size: 12px; color: #666; font-weight: normal;">文章链接的位置（相对于 items）</span>
+                </label>
+                <textarea id="manualLink" rows="2" placeholder="例如：.//a/@href 或 .//@data-url"></textarea>
+            </div>
+            
+            <div class="input-section">
+                <label for="manualContent">
+                    内容 (item_content) - 可选：
+                    <span style="font-size: 12px; color: #666; font-weight: normal;">文章摘要或内容（相对于 items）</span>
+                </label>
+                <textarea id="manualContent" rows="2" placeholder="例如：.//div[@class='summary'] 或 ./p"></textarea>
+            </div>
+            
+            <div class="input-section">
+                <label for="manualTime">
+                    时间 (item_time) - 可选：
+                    <span style="font-size: 12px; color: #666; font-weight: normal;">发布时间（相对于 items）</span>
+                </label>
+                <textarea id="manualTime" rows="2" placeholder="例如：.//span[@class='date'] 或 .//@datetime"></textarea>
+            </div>
+            
+            <button onclick="generateFromManual()">🚀 生成 Morss URL</button>
+            <button class="button-danger" onclick="closeManualInput()">取消</button>
+        </div>
+        
+        <div id="selectionMode" class="selection-mode hidden">
+            正在选择：<span id="currentSelection"></span>
+        </div>
+        
+        <div class="iframe-container hidden" id="iframeContainer">
+            <div class="iframe-header">
+                已加载页面：<span id="loadedUrl"></span>
+                <button class="button-danger" onclick="closeIframe()" style="float: right; padding: 4px 12px; margin: 0;">关闭</button>
+            </div>
+            <iframe id="targetFrame" sandbox="allow-same-origin allow-scripts"></iframe>
+        </div>
+        
+        <div class="output-section hidden" id="outputSection">
+            <h2>生成的 XPath 规则</h2>
+            
+            <div id="xpathRules"></div>
+            
+            <div class="morss-url" id="morssUrlSection">
+                <h3>🔗 Morss 订阅 URL（点击复制）</h3>
+                <div class="url-value" id="morssUrl"></div>
+                <button class="copy-btn button-secondary" onclick="copyMorssUrl()">复制完整 URL</button>
+                <button class="copy-btn" onclick="testInNewTab()">在新标签页测试</button>
+            </div>
+        </div>
+        
+        <div class="help-section">
+            <h2>💡 更多帮助</h2>
+            <p>
+                <strong>关于 XPath 规则：</strong> XPath 是一种在 HTML/XML 文档中查找信息的语言。
+                本工具会自动生成简洁的 XPath 表达式。
+            </p>
+            <p>
+                <strong>详细文档：</strong> 
+                <a href="/XPATH_CUSTOM_FEEDS_CN.md" target="_blank">《Morss 自定义 XPath 规则详解》</a>
+            </p>
+            <p>
+                <strong>示例用法：</strong>
+                <br>1. CLI 模式：<code>morss --items="//div[@class='post']" https://example.com</code>
+                <br>2. Web 模式：<code>https://morss.it/:items=%7C%7Cdiv%5B%40class%3D%27post%27%5D/https://example.com</code>
+            </p>
+            <p>
+                <strong>其他功能：</strong> Morss 还支持从 JSON 页面创建订阅源、CSV 导出、缓存等功能。
+                查看 <a href="/">主页</a> 了解更多。
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        let xpathRules = {
+            items: null,
+            item_title: null,
+            item_link: null,
+            item_content: null,
+            item_time: null
+        };
+        
+        let currentStep = null;
+        let targetUrl = '';
+        let selectionSteps = [
+            { key: 'items', label: '订阅项容器（items）', required: true },
+            { key: 'item_title', label: '标题（item_title）', required: false },
+            { key: 'item_link', label: '链接（item_link）', required: false },
+            { key: 'item_content', label: '内容（item_content）', required: false }
+        ];
+        let currentStepIndex = 0;
+        
+        function loadPage() {
+            const url = document.getElementById('targetUrl').value.trim();
+            if (!url) {
+                alert('请输入有效的 URL');
+                return;
+            }
+            
+            // Validate URL
+            try {
+                new URL(url);
+            } catch (e) {
+                alert('URL 格式不正确，请输入完整的 URL（包括 http:// 或 https://）');
+                return;
+            }
+            
+            targetUrl = url;
+            document.getElementById('loadedUrl').textContent = url;
+            document.getElementById('iframeContainer').classList.remove('hidden');
+            
+            // Try to load the page
+            const iframe = document.getElementById('targetFrame');
+            iframe.src = url;
+            
+            iframe.onerror = function() {
+                alert('无法加载此页面（可能由于 CORS 限制）。\n请尝试"使用代理模式"或手动使用浏览器开发者工具获取 XPath。');
+            };
+            
+            iframe.onload = function() {
+                try {
+                    // Test if we can access iframe content
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (doc) {
+                        startSelection();
+                    }
+                } catch (e) {
+                    alert('无法访问此页面内容（CORS 限制）。\n\n解决方案：\n1. 使用"代理模式"（推荐）\n2. 手动使用浏览器开发者工具（F12）获取 XPath\n3. 查看文档了解如何手动编写 XPath 规则');
+                    console.error('CORS error:', e);
+                }
+            };
+        }
+        
+        function useProxyMode() {
+            alert('代理模式说明：\n\n由于浏览器安全限制，某些网站无法直接在此工具中加载。\n\n推荐使用以下方法：\n\n1. 【推荐】使用浏览器开发者工具（F12）：\n   - 打开目标网页\n   - 按 F12 打开开发者工具\n   - 点击"元素选择器"（Ctrl+Shift+C）\n   - 点击页面元素\n   - 右键 → 复制 → 复制 XPath\n\n2. 使用在线 XPath 测试工具\n\n3. 查看文档中的示例学习 XPath 语法\n\n详细教程：' + window.location.origin + '/XPATH_CUSTOM_FEEDS_CN.md');
+        }
+        
+        function startSelection() {
+            currentStepIndex = 0;
+            nextStep();
+        }
+        
+        function nextStep() {
+            if (currentStepIndex >= selectionSteps.length) {
+                finishSelection();
+                return;
+            }
+            
+            const step = selectionSteps[currentStepIndex];
+            currentStep = step.key;
+            
+            document.getElementById('selectionMode').classList.remove('hidden');
+            document.getElementById('currentSelection').textContent = step.label;
+            
+            const iframe = document.getElementById('targetFrame');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // Remove previous event listeners by cloning iframe
+            // Actually, let's use a different approach - add overlay
+            addSelectionOverlay(doc, step);
+        }
+        
+        function addSelectionOverlay(doc, step) {
+            // Remove existing overlay
+            const existingOverlay = doc.getElementById('morss-xpath-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+            
+            // Create instruction overlay
+            const overlay = doc.createElement('div');
+            overlay.id = 'morss-xpath-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px;
+                z-index: 999999;
+                text-align: center;
+                font-family: sans-serif;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            `;
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                    请选择：${step.label}
+                </div>
+                <div style="font-size: 14px;">
+                    ${step.required ? '（必选）' : '（可选）'} 
+                    点击页面上对应的元素，或 
+                    <a href="#" onclick="window.parent.skipStep(); return false;" 
+                       style="color: #ffeb3b; text-decoration: underline;">跳过此步骤</a>
+                </div>
+            `;
+            doc.body.insertBefore(overlay, doc.body.firstChild);
+            
+            // Add click listener to all elements
+            doc.body.addEventListener('click', handleElementClick, true);
+        }
+        
+        function handleElementClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const element = e.target;
+            
+            // Don't select the overlay itself
+            if (element.id === 'morss-xpath-overlay' || element.closest('#morss-xpath-overlay')) {
+                return;
+            }
+            
+            const xpath = getXPath(element);
+            const step = selectionSteps[currentStepIndex];
+            
+            xpathRules[step.key] = xpath;
+            
+            // Visual feedback
+            element.style.outline = '3px solid #4CAF50';
+            setTimeout(() => {
+                element.style.outline = '';
+            }, 500);
+            
+            // Move to next step
+            currentStepIndex++;
+            
+            // Remove event listener
+            const iframe = document.getElementById('targetFrame');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.body.removeEventListener('click', handleElementClick, true);
+            
+            // Remove overlay
+            const overlay = doc.getElementById('morss-xpath-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            // Next step or finish
+            setTimeout(() => {
+                nextStep();
+            }, 600);
+        }
+        
+        function skipStep() {
+            const step = selectionSteps[currentStepIndex];
+            if (step.required) {
+                alert('此步骤为必选项，不能跳过');
+                return;
+            }
+            
+            currentStepIndex++;
+            
+            // Remove event listener
+            const iframe = document.getElementById('targetFrame');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.body.removeEventListener('click', handleElementClick, true);
+            
+            // Remove overlay
+            const overlay = doc.getElementById('morss-xpath-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            nextStep();
+        }
+        
+        function finishSelection() {
+            document.getElementById('selectionMode').classList.add('hidden');
+            
+            // Remove overlay from iframe
+            try {
+                const iframe = document.getElementById('targetFrame');
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                const overlay = doc.getElementById('morss-xpath-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            } catch (e) {
+                console.error('Could not remove overlay:', e);
+            }
+            
+            displayResults();
+        }
+        
+        function getXPath(element) {
+            if (element.id !== '') {
+                return `//*[@id="${element.id}"]`;
+            }
+            
+            if (element === document.body) {
+                return '/html/body';
+            }
+            
+            let ix = 0;
+            const siblings = element.parentNode ? element.parentNode.childNodes : [];
+            
+            for (let i = 0; i < siblings.length; i++) {
+                const sibling = siblings[i];
+                if (sibling === element) {
+                    // Generate a more readable XPath
+                    const tagName = element.tagName.toLowerCase();
+                    let pathPart = tagName;
+                    
+                    // Add class information if available
+                    if (element.className && typeof element.className === 'string') {
+                        const classes = element.className.trim().split(/\s+/);
+                        if (classes.length > 0 && classes[0]) {
+                            pathPart = `${tagName}[@class="${classes[0]}"]`;
+                        }
+                    }
+                    
+                    return getXPath(element.parentNode) + '/' + pathPart;
+                }
+                
+                if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+                    ix++;
+                }
+            }
+            
+            return '';
+        }
+        
+        function displayResults() {
+            document.getElementById('outputSection').classList.remove('hidden');
+            
+            const rulesContainer = document.getElementById('xpathRules');
+            rulesContainer.innerHTML = '';
+            
+            // Show optimization info if items was optimized
+            if (xpathRules._original_items) {
+                const optimizationDiv = document.createElement('div');
+                optimizationDiv.className = 'xpath-rule';
+                optimizationDiv.style.borderLeftColor = '#2196F3';
+                optimizationDiv.innerHTML = `
+                    <h3>✨ XPath 自动优化</h3>
+                    <div style="margin-bottom: 10px;">
+                        <strong>原始 XPath：</strong>
+                        <div class="xpath-value" style="background: #fff3cd; border-color: #ffc107;">${escapeHtml(xpathRules._original_items)}</div>
+                    </div>
+                    <div>
+                        <strong>优化后 XPath：</strong>
+                        <div class="xpath-value" style="background: #e8f5e9; border-color: #4CAF50;">${escapeHtml(xpathRules.items)}</div>
+                    </div>
+                    <p style="color: #666; font-size: 13px; margin-top: 10px; margin-bottom: 0;">
+                        💡 系统自动简化了 XPath，使其更通用和易于维护。优化后的 XPath 将用于生成 Morss URL。
+                    </p>
+                `;
+                rulesContainer.appendChild(optimizationDiv);
+            }
+            
+            for (const [key, value] of Object.entries(xpathRules)) {
+                if (value && !key.startsWith('_')) {
+                    const ruleDiv = document.createElement('div');
+                    ruleDiv.className = 'xpath-rule';
+                    ruleDiv.innerHTML = `
+                        <h3>${getRuleLabel(key)}</h3>
+                        <div class="xpath-value">${escapeHtml(value)}</div>
+                        <button class="copy-btn" onclick="copyToClipboard('${escapeForJs(value)}')">复制 XPath</button>
+                    `;
+                    rulesContainer.appendChild(ruleDiv);
+                }
+            }
+            
+            // Generate Morss URL
+            generateMorssUrl();
+        }
+        
+        function getRuleLabel(key) {
+            const labels = {
+                'items': '订阅项（items）',
+                'item_title': '标题（item_title）',
+                'item_link': '链接（item_link）',
+                'item_content': '内容（item_content）',
+                'item_time': '时间（item_time）'
+            };
+            return labels[key] || key;
+        }
+        
+        function generateMorssUrl() {
+            if (!xpathRules.items) {
+                document.getElementById('morssUrl').textContent = '错误：缺少必需的 items 规则';
+                return;
+            }
+            
+            // Build options string
+            let options = [];
+            for (const [key, value] of Object.entries(xpathRules)) {
+                if (value && !key.startsWith('_')) {
+                    // Replace / with | and URL encode
+                    const encoded = value.replace(/\//g, '|');
+                    options.push(`${key}=${encodeURIComponent(encoded)}`);
+                }
+            }
+            
+            // Add mode=html
+            options.push('mode=html');
+            
+            const morssBase = window.location.origin;
+            const optionsStr = options.map(opt => {
+                // For display, we need to properly format it
+                return opt;
+            }).join(':');
+            
+            const morssUrl = `${morssBase}/:${optionsStr}/${targetUrl}`;
+            
+            document.getElementById('morssUrl').textContent = morssUrl;
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // Fallback method
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('已复制到剪贴板！');
+            });
+        }
+        
+        function copyMorssUrl() {
+            const url = document.getElementById('morssUrl').textContent;
+            copyToClipboard(url);
+        }
+        
+        function testInNewTab() {
+            const url = document.getElementById('morssUrl').textContent;
+            window.open(url, '_blank');
+        }
+        
+        function closeIframe() {
+            document.getElementById('iframeContainer').classList.add('hidden');
+            document.getElementById('outputSection').classList.add('hidden');
+            document.getElementById('selectionMode').classList.add('hidden');
+            
+            // Reset state
+            xpathRules = {
+                items: null,
+                item_title: null,
+                item_link: null,
+                item_content: null,
+                item_time: null
+            };
+            currentStepIndex = 0;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function escapeForJs(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+        
+        // Manual input mode
+        function showManualInput() {
+            const manualSection = document.getElementById('manualInputSection');
+            manualSection.classList.toggle('hidden');
+            
+            // Close iframe if open
+            if (!manualSection.classList.contains('hidden')) {
+                document.getElementById('iframeContainer').classList.add('hidden');
+                document.getElementById('selectionMode').classList.add('hidden');
+            }
+        }
+        
+        function closeManualInput() {
+            const manualSection = document.getElementById('manualInputSection');
+            manualSection.classList.add('hidden');
+            
+            // Clear inputs
+            document.getElementById('manualItems').value = '';
+            document.getElementById('manualTitle').value = '';
+            document.getElementById('manualLink').value = '';
+            document.getElementById('manualContent').value = '';
+            document.getElementById('manualTime').value = '';
+        }
+        
+        // XPath optimization function
+        function optimizeXPath(xpath) {
+            if (!xpath) return xpath;
+            
+            xpath = xpath.trim();
+            
+            // Remove leading/trailing quotes if present
+            if ((xpath.startsWith('"') && xpath.endsWith('"')) || 
+                (xpath.startsWith("'") && xpath.endsWith("'"))) {
+                xpath = xpath.slice(1, -1);
+            }
+            
+            // 1. Simplify complex absolute paths generated by browser
+            // Example: /html/body/div[1]/div[2]/article[@class="post"]
+            // Convert to: //article[@class="post"]
+            
+            // If xpath contains specific class/id at the end, try to simplify
+            const classMatch = xpath.match(/\[@class=['"]([^'"]+)['"]\]$/);
+            const idMatch = xpath.match(/\[@id=['"]([^'"]+)['"]\]$/);
+            
+            if (classMatch || idMatch) {
+                // Extract the last element with class or id
+                const parts = xpath.split('/');
+                const lastPart = parts[parts.length - 1];
+                const tagMatch = lastPart.match(/^(\w+)\[/);
+                
+                if (tagMatch) {
+                    const tag = tagMatch[1];
+                    if (classMatch) {
+                        // Simplify to //tag[@class="..."]
+                        xpath = `//${tag}[@class="${classMatch[1]}"]`;
+                    } else if (idMatch) {
+                        // Simplify to //*[@id="..."]
+                        xpath = `//*[@id="${idMatch[1]}"]`;
+                    }
+                }
+            }
+            // If no class/id but has multiple levels, try to simplify by using //
+            else if (xpath.startsWith('/html/body/') && !xpath.includes('[@')) {
+                // Convert /html/body/div/div/article to //article
+                const parts = xpath.split('/').filter(p => p);
+                if (parts.length > 3) {
+                    const lastTag = parts[parts.length - 1];
+                    // Only simplify if the last tag looks specific (not just div)
+                    if (lastTag !== 'div' && lastTag !== 'span') {
+                        xpath = '//' + lastTag;
+                    }
+                }
+            }
+            
+            // 2. Convert class exact match to Morss simplified syntax (only for items)
+            // //div[@class="post"] can be written as //div[class=post] in Morss
+            // But we'll keep the standard format for compatibility
+            
+            // 3. For relative paths (starting with .), ensure they are properly formatted
+            if (xpath.startsWith('.//') || xpath.startsWith('./')) {
+                // Already relative, keep as is
+            } else if (xpath.startsWith('//') || xpath.startsWith('/')) {
+                // Absolute path, keep as is
+            } else if (!xpath.startsWith('/') && !xpath.startsWith('.')) {
+                // No prefix, assume relative
+                xpath = './' + xpath;
+            }
+            
+            return xpath;
+        }
+        
+        function generateFromManual() {
+            // Get manual inputs
+            let items = document.getElementById('manualItems').value.trim();
+            
+            if (!items) {
+                alert('请至少输入 items 规则（必需）');
+                return;
+            }
+            
+            targetUrl = document.getElementById('targetUrl').value.trim();
+            if (!targetUrl) {
+                alert('请输入目标 URL');
+                return;
+            }
+            
+            // Validate URL
+            try {
+                new URL(targetUrl);
+            } catch (e) {
+                alert('URL 格式不正确，请输入完整的 URL（包括 http:// 或 https://）');
+                return;
+            }
+            
+            // Optimize XPath expressions
+            const originalItems = items;
+            items = optimizeXPath(items);
+            
+            const title = document.getElementById('manualTitle').value.trim();
+            const link = document.getElementById('manualLink').value.trim();
+            const content = document.getElementById('manualContent').value.trim();
+            const time = document.getElementById('manualTime').value.trim();
+            
+            xpathRules.items = items;
+            xpathRules.item_title = optimizeXPath(title) || null;
+            xpathRules.item_link = optimizeXPath(link) || null;
+            xpathRules.item_content = optimizeXPath(content) || null;
+            xpathRules.item_time = optimizeXPath(time) || null;
+            
+            // Store original for comparison
+            xpathRules._original_items = originalItems !== items ? originalItems : null;
+            
+            // Close manual input and show results
+            closeManualInput();
+            displayResults();
+        }
+    </script>
+</body>
+</html>

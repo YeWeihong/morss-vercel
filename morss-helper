@@ -1,0 +1,47 @@
+#! /bin/sh
+set -ex
+
+if ! command -v python && command -v python3 ; then
+	alias python='python3'
+fi
+
+run() {
+	gunicorn --bind 0.0.0.0:${PORT:-8000} --preload --access-logfile - morss
+}
+
+daemon() {
+	gunicorn --bind 0.0.0.0:${PORT:-8000} --preload --access-logfile - --daemon morss
+}
+
+reload() {
+	pid=$(pidof 'gunicorn: master [morss]' || true)
+		# NB. requires python-setproctitle
+		# `|| true` due to `set -e`
+
+	if [ -z "$pid" ]; then
+		# if gunicorn is not currently running
+		daemon
+
+	else
+		kill -s USR2 $pid
+		kill -s WINCH $pid
+		sleep 1 # give gunicorn some time to reload
+		kill -s TERM $pid
+
+	fi
+}
+
+check() {
+	python -m morss.crawler http://localhost:${PORT:-8000}/ > /dev/null 2>&1
+}
+
+if [ -z "$1" ]; then
+	run
+
+elif [ "$1" = "sh" ] || [ "$1" = "bash" ] || command -v "$1" ; then
+	$@
+
+else
+	python -m morss $@
+
+fi
