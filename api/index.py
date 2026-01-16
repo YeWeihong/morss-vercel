@@ -34,8 +34,14 @@ _parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__fi
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-# Cache for the application - using exec() to completely isolate the import
-_app_cache = {}
+# # Cache for the application - using exec() to completely isolate the import
+# _app_cache = {}
+
+# 直接导入，不用 exec 隔离（很多项目都这样成功了）
+from morss.wsgi import application
+
+# Vercel 更喜欢看到这个名字
+app = application
 
 def handler(environ, start_response):
     """
