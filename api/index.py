@@ -79,13 +79,24 @@ class handler(BaseHTTPRequestHandler):
             server_name = host_header
             server_port = '80'
         
+        # Validate and set CONTENT_LENGTH according to WSGI spec
+        # Should be empty string if not present, not '0'
+        content_length_header = self.headers.get('Content-Length', '')
+        if content_length_header:
+            try:
+                # Validate it's a valid integer
+                int(content_length_header)
+            except ValueError:
+                # Invalid content length, set to empty string
+                content_length_header = ''
+        
         environ = {
             'REQUEST_METHOD': request_method,
             'SCRIPT_NAME': '',
             'PATH_INFO': parsed_url.path or '/',
             'QUERY_STRING': parsed_url.query or '',
             'CONTENT_TYPE': self.headers.get('Content-Type', ''),
-            'CONTENT_LENGTH': self.headers.get('Content-Length', '0'),
+            'CONTENT_LENGTH': content_length_header,
             'SERVER_NAME': server_name,
             'SERVER_PORT': server_port,
             'SERVER_PROTOCOL': self.request_version,

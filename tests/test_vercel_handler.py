@@ -59,10 +59,17 @@ def test_handler_execution():
     """Test that the handler can be instantiated and process requests."""
     from api.index import handler
     
+    def make_mock_file(mode, **kwargs):
+        """Helper function to create mock file objects based on mode."""
+        if 'r' in mode:
+            return io.BytesIO(b'GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        else:
+            return io.BytesIO()
+    
     # Create mock request, client_address, and server objects
     # These are required by BaseHTTPRequestHandler.__init__
     mock_request = Mock()
-    mock_request.makefile = Mock(side_effect=lambda mode, **kwargs: io.BytesIO(b'GET / HTTP/1.1\r\nHost: localhost\r\n\r\n') if 'r' in mode else io.BytesIO())
+    mock_request.makefile = Mock(side_effect=make_mock_file)
     
     mock_server = Mock()
     mock_server.server_name = 'localhost'
