@@ -23,6 +23,7 @@ docker-compose*.yml
 *.md
 !README.md
 !VERCEL_DEPLOYMENT_CN.md
+!VERCEL_CONFIG.md
 
 # CI/CD for other platforms
 heroku.yml
