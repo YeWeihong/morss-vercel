@@ -22,11 +22,28 @@
 Vercel serverless function entry point for Morss.
 
 This module provides a WSGI-compatible handler for Vercel's Python runtime.
-The handler uses late-binding imports to avoid exposing module-level classes
-from morss.wsgi in the handler's __globals__, which would trigger a bug in
-Vercel's runtime where it calls issubclass() on non-class objects.
 """
 
+import sys
+import os
+
+# Set up path at module load time (once, not per-request)
+# This ensures __file__ is available and path is set correctly
+_parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
+# Import the WSGI application at module level
+# Note: We import inside a function wrapper to avoid exposing morss.wsgi's
+# module-level objects in the handler's __globals__, which would trigger
+# Vercel's issubclass() bug
+def _get_application():
+    """Lazy import wrapper to isolate morss.wsgi's globals."""
+    from morss.wsgi import application
+    return application
+
+# Cache the application after first import
+_app = None
 
 def handler(environ, start_response):
     """
@@ -39,17 +56,7 @@ def handler(environ, start_response):
     Returns:
         WSGI response iterable
     """
-    # Import everything inside the function to keep module namespace minimal
-    import sys
-    import os
-    
-    # Add parent directory to path to import morss module (only if not already present)
-    # Normalize path to handle different representations (relative vs absolute, etc.)
-    parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    
-    # Import morss application
-    from morss.wsgi import application
-    
-    return application(environ, start_response)
+    global _app
+    if _app is None:
+        _app = _get_application()
+    return _app(environ, start_response)
