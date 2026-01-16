@@ -44,7 +44,8 @@ def handler(environ, start_response):
     import os
     
     # Add parent directory to path to import morss module (only if not already present)
-    parent_dir = os.path.join(os.path.dirname(__file__), '..')
+    # Normalize path to handle different representations (relative vs absolute, etc.)
+    parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
     
