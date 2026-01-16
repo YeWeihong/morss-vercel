@@ -22,32 +22,29 @@
 Vercel serverless function entry point for Morss.
 
 This module provides a WSGI-compatible handler for Vercel's Python runtime.
+The handler is isolated from morss.wsgi's module-level classes to avoid
+triggering Vercel's issubclass() inspection bug.
 """
 
 import sys
 import os
 
 # Set up path at module load time (once, not per-request)
-# This ensures __file__ is available and path is set correctly
 _parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-# Import the WSGI application at module level
-# Note: We import inside a function wrapper to avoid exposing morss.wsgi's
-# module-level objects in the handler's __globals__, which would trigger
-# Vercel's issubclass() bug
-def _get_application():
-    """Lazy import wrapper to isolate morss.wsgi's globals."""
-    from morss.wsgi import application
-    return application
-
-# Cache the application after first import
-_app = None
+# Cache for the application - using exec() to completely isolate the import
+_app_cache = {}
 
 def handler(environ, start_response):
     """
     WSGI application handler for Vercel.
+    
+    This handler uses exec() to completely isolate the morss.wsgi module's
+    globals from this handler's __globals__, preventing Vercel's Python runtime
+    from encountering WSGIRequestHandlerRequestUri and other classes that
+    trigger its issubclass() inspection bug.
     
     Args:
         environ: WSGI environment dict
@@ -56,7 +53,10 @@ def handler(environ, start_response):
     Returns:
         WSGI response iterable
     """
-    global _app
-    if _app is None:
-        _app = _get_application()
-    return _app(environ, start_response)
+    if 'app' not in _app_cache:
+        # Use exec() to import in an isolated namespace
+        local_ns = {}
+        exec('from morss.wsgi import application', local_ns)
+        _app_cache['app'] = local_ns['application']
+    
+    return _app_cache['app'](environ, start_response)
