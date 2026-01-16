@@ -19,22 +19,44 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Vercel serverless function entry point for Morss
-This module adapts the WSGI application for Vercel's serverless environment
+Vercel serverless function entry point for Morss.
+
+This module provides a WSGI-compatible handler for Vercel's Python runtime.
 """
 
-# Import sys and os at module level for path manipulation
-import sys as _sys
-import os as _os
+import sys
+import os
 
-# Add parent directory to path to import morss module
-_sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..'))
+# Set up path at module load time (once, not per-request)
+# This ensures __file__ is available and path is set correctly
+_parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
 
-# Import the WSGI application as 'handler' for Vercel
-# Note: Use __all__ and prefixed imports to avoid Vercel's issubclass() TypeError
-# Vercel's runtime inspects module attributes and calls issubclass() without
-# checking if they're classes first, causing "TypeError: issubclass() arg 1 must be a class"
-from morss.wsgi import application as handler
+# Import the WSGI application at module level
+# Note: We import inside a function wrapper to avoid exposing morss.wsgi's
+# module-level objects in the handler's __globals__, which would trigger
+# Vercel's issubclass() bug
+def _get_application():
+    """Lazy import wrapper to isolate morss.wsgi's globals."""
+    from morss.wsgi import application
+    return application
 
-# Explicitly declare what should be exported - only the handler function
-__all__ = ['handler']
+# Cache the application after first import
+_app = None
+
+def handler(environ, start_response):
+    """
+    WSGI application handler for Vercel.
+    
+    Args:
+        environ: WSGI environment dict
+        start_response: WSGI start_response callable
+        
+    Returns:
+        WSGI response iterable
+    """
+    global _app
+    if _app is None:
+        _app = _get_application()
+    return _app(environ, start_response)
