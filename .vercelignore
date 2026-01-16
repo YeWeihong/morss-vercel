@@ -23,6 +23,8 @@ docker-compose*.yml
 *.md
 !README.md
 !VERCEL_DEPLOYMENT_CN.md
+!VERCEL_CONFIG.md
+!VERCEL_OPTIMIZATION_SUMMARY_CN.md
 
 # CI/CD for other platforms
 heroku.yml
@@ -32,3 +34,10 @@ morss.service
 # Development
 .pylintrc
 .gitignore
+setup.py
+morss-helper
+
+# Temporary files
+*.log
+*.cache
+cache/
