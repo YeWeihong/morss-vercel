@@ -66,6 +66,19 @@ class handler(BaseHTTPRequestHandler):
         """
         parsed_url = urlparse(self.path)
         
+        # Parse Host header for server name and port
+        host_header = self.headers.get('Host', 'localhost:80')
+        if ':' in host_header:
+            server_name, server_port = host_header.rsplit(':', 1)
+            # Validate port is numeric, default to 80 if not
+            try:
+                int(server_port)
+            except ValueError:
+                server_port = '80'
+        else:
+            server_name = host_header
+            server_port = '80'
+        
         environ = {
             'REQUEST_METHOD': request_method,
             'SCRIPT_NAME': '',
@@ -73,8 +86,8 @@ class handler(BaseHTTPRequestHandler):
             'QUERY_STRING': parsed_url.query or '',
             'CONTENT_TYPE': self.headers.get('Content-Type', ''),
             'CONTENT_LENGTH': self.headers.get('Content-Length', '0'),
-            'SERVER_NAME': self.headers.get('Host', 'localhost').split(':')[0],
-            'SERVER_PORT': self.headers.get('Host', 'localhost:80').split(':')[-1] if ':' in self.headers.get('Host', '') else '80',
+            'SERVER_NAME': server_name,
+            'SERVER_PORT': server_port,
             'SERVER_PROTOCOL': self.request_version,
             'wsgi.version': (1, 0),
             'wsgi.url_scheme': 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http',
@@ -116,8 +129,14 @@ class handler(BaseHTTPRequestHandler):
             # Call the WSGI application
             response_data = application(environ, start_response)
             
-            # Send response status
-            status_code = int(self.response_status.split(' ', 1)[0]) if self.response_status else 200
+            # Send response status - parse status code safely
+            status_code = 200  # default
+            if self.response_status:
+                try:
+                    status_code = int(self.response_status.split(' ', 1)[0])
+                except (ValueError, IndexError):
+                    status_code = 200  # fallback to 200 if parsing fails
+            
             self.send_response(status_code)
             
             # Send response headers
@@ -147,8 +166,12 @@ class handler(BaseHTTPRequestHandler):
         """
         Handle POST requests by converting them to WSGI format and calling the application.
         """
-        # Read POST data
-        content_length = int(self.headers.get('Content-Length', 0))
+        # Read POST data - safely parse Content-Length
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+        except (ValueError, TypeError):
+            content_length = 0
+        
         post_data = self.rfile.read(content_length) if content_length > 0 else b''
         
         environ = self._build_wsgi_environ('POST', io.BytesIO(post_data))
