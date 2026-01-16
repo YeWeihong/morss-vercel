@@ -21,43 +21,47 @@
 """
 Vercel serverless function entry point for Morss.
 
-This module provides a WSGI-compatible handler for Vercel's Python runtime.
-The handler is isolated from morss.wsgi's module-level classes to avoid
-triggering Vercel's issubclass() inspection bug.
+This module provides a clean WSGI application entry point for Vercel's Python runtime.
+
+Why this simple approach works:
+1. Vercel looks for a variable named "app" or "handler" in the entry point file
+2. The problematic WSGIRequestHandlerRequestUri class (which inherits from 
+   BaseHTTPRequestHandler) is defined in morss.wsgi, not in this file
+3. Vercel's runtime only inspects the entry point file's globals for HTTP handler
+   classes, not the globals of imported modules
+4. By directly importing and exposing the WSGI application, we keep this file
+   simple and avoid the issubclass() inspection issues
+
+Previous attempts using exec() and namespace isolation were overly complex and
+still failed because Vercel could detect referenced classes through various means.
+The simplest solution is the most reliable.
 """
 
 import sys
 import os
 
-# Set up path at module load time (once, not per-request)
+# Set up Python path to allow importing morss modules
+# This is necessary because the morss package is in the parent directory
 _parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-# # Cache for the application - using exec() to completely isolate the import
-# _app_cache = {}
-
-# 直接导入，不用 exec 隔离（很多项目都这样成功了）
+# Import the WSGI application from morss.wsgi
+# The application is a fully configured WSGI app with all middleware applied
 from morss.wsgi import application
 
-# Vercel 更喜欢看到这个名字
+# Expose the application as "app" - this is what Vercel will use
+# Vercel's Python runtime prefers finding a variable named "app"
 app = application
 
+# Also provide a handler function for compatibility with different Vercel configurations
+# This is a simple passthrough to the WSGI application
 def handler(environ, start_response):
     """
     WSGI application handler for Vercel.
     
-    This handler uses exec() to completely isolate the morss.wsgi module's
-    globals from this handler's __globals__, preventing Vercel's Python runtime
-    from encountering WSGIRequestHandlerRequestUri and other classes that
-    trigger its issubclass() inspection bug.
-    
-    Why exec() instead of importlib.import_module():
-    Using exec() with an isolated namespace allows us to import and extract
-    only the 'application' object without adding any imports to this handler's
-    __globals__. With importlib, we'd need to import the module which would
-    add the import to __globals__, or store a module reference which would
-    expose the module's classes. exec() keeps this handler's __globals__ clean.
+    This is a simple wrapper that delegates to the morss WSGI application.
+    Vercel can use either the 'app' variable or this 'handler' function.
     
     Args:
         environ: WSGI environment dict
@@ -66,10 +70,4 @@ def handler(environ, start_response):
     Returns:
         WSGI response iterable
     """
-    if 'app' not in _app_cache:
-        # Use exec() to import in an isolated namespace
-        local_ns = {}
-        exec('from morss.wsgi import application', local_ns)
-        _app_cache['app'] = local_ns['application']
-    
-    return _app_cache['app'](environ, start_response)
+    return app(environ, start_response)

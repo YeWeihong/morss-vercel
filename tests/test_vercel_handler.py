@@ -104,44 +104,16 @@ def test_handler_execution():
     print(f"✓ handler executed successfully with status: {response_status[0]}")
 
 
-def test_handler_caching():
-    """Test that the handler properly caches the application."""
-    from api.index import handler, _app_cache
+def test_app_variable():
+    """Test that the 'app' variable is properly exposed."""
+    from api.index import app, application
     
-    # Clear cache
-    _app_cache.clear()
-    assert 'app' not in _app_cache, "Cache should be empty"
+    # Verify app exists and is the same as application
+    assert app is not None, "app should be defined"
+    assert app is application, "app should be the same object as application"
+    assert callable(app), "app should be callable (WSGI application)"
     
-    # First call should populate cache with proper wsgi.input
-    environ = {
-        'REQUEST_METHOD': 'GET',
-        'PATH_INFO': '/',
-        'QUERY_STRING': '',
-        'SERVER_NAME': 'localhost',
-        'SERVER_PORT': '8000',
-        'wsgi.version': (1, 0),
-        'wsgi.url_scheme': 'http',
-        'wsgi.input': io.BytesIO(),  # Proper WSGI input stream
-        'wsgi.errors': sys.stderr,
-        'wsgi.multithread': False,
-        'wsgi.multiprocess': True,
-        'wsgi.run_once': False,
-    }
-    
-    def start_response(status, headers, exc_info=None):
-        return lambda x: None
-    
-    handler(environ, start_response)
-    assert 'app' in _app_cache, "Cache should be populated after first call"
-    
-    # Get cached app reference
-    cached_app = _app_cache['app']
-    
-    # Second call should use same cached app
-    handler(environ, start_response)
-    assert _app_cache['app'] is cached_app, "Should reuse cached application"
-    
-    print("✓ handler caching works correctly")
+    print("✓ 'app' variable is properly exposed")
 
 
 if __name__ == '__main__':
@@ -151,7 +123,7 @@ if __name__ == '__main__':
     try:
         test_handler_globals_isolation()
         test_handler_execution()
-        test_handler_caching()
+        test_app_variable()
         
         print("=" * 60)
         print("✓ ALL TESTS PASSED")
