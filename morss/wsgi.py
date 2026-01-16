@@ -279,14 +279,16 @@ def cgi_handle_request():
     wsgiref.handlers.CGIHandler().run(app)
 
 
-class WSGIRequestHandlerRequestUri(wsgiref.simple_server.WSGIRequestHandler):
-    def get_environ(self):
-        env = wsgiref.simple_server.WSGIRequestHandler.get_environ(self)
-        env['REQUEST_URI'] = self.path
-        return env
-
-
 def cgi_start_server():
+    """
+    Start a standalone HTTP server for development.
+    
+    This function imports the custom request handler class only when needed,
+    to avoid exposing it in the WSGI application's globals (which would break
+    Vercel's serverless runtime).
+    """
+    from .server import WSGIRequestHandlerRequestUri
+    
     caching.default_cache.autotrim()
 
     print('Serving http://localhost:%s/' % PORT)
