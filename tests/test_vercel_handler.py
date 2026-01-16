@@ -18,6 +18,7 @@ This occurred because Vercel's runtime found WSGIRequestHandlerRequestUri
 
 import sys
 import os
+import io
 from http.server import BaseHTTPRequestHandler
 
 # Add parent directory to path
@@ -43,7 +44,7 @@ def test_handler_globals_isolation():
     # Check handler's __globals__ for problematic classes
     problematic_classes = []
     for name, obj in handler.__globals__.items():
-        if type(obj).__name__ == 'type':  # It's a class
+        if isinstance(obj, type):  # It's a class
             try:
                 if issubclass(obj, BaseHTTPRequestHandler):
                     problematic_classes.append((name, obj))
@@ -66,7 +67,7 @@ def test_handler_execution():
     """Test that the handler actually works."""
     from api.index import handler
     
-    # Create minimal WSGI environ
+    # Create minimal WSGI environ with proper wsgi.input
     environ = {
         'REQUEST_METHOD': 'GET',
         'PATH_INFO': '/',
@@ -75,7 +76,7 @@ def test_handler_execution():
         'SERVER_PORT': '8000',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': sys.stdin.buffer if hasattr(sys.stdin, 'buffer') else sys.stdin,
+        'wsgi.input': io.BytesIO(),  # Proper WSGI input stream
         'wsgi.errors': sys.stderr,
         'wsgi.multithread': False,
         'wsgi.multiprocess': True,
@@ -111,7 +112,7 @@ def test_handler_caching():
     _app_cache.clear()
     assert 'app' not in _app_cache, "Cache should be empty"
     
-    # First call should populate cache
+    # First call should populate cache with proper wsgi.input
     environ = {
         'REQUEST_METHOD': 'GET',
         'PATH_INFO': '/',
@@ -120,7 +121,7 @@ def test_handler_caching():
         'SERVER_PORT': '8000',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': sys.stdin.buffer if hasattr(sys.stdin, 'buffer') else sys.stdin,
+        'wsgi.input': io.BytesIO(),  # Proper WSGI input stream
         'wsgi.errors': sys.stderr,
         'wsgi.multithread': False,
         'wsgi.multiprocess': True,

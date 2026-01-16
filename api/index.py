@@ -46,6 +46,13 @@ def handler(environ, start_response):
     from encountering WSGIRequestHandlerRequestUri and other classes that
     trigger its issubclass() inspection bug.
     
+    Why exec() instead of importlib.import_module():
+    Using exec() with an isolated namespace allows us to import and extract
+    only the 'application' object without adding any imports to this handler's
+    __globals__. With importlib, we'd need to import the module which would
+    add the import to __globals__, or store a module reference which would
+    expose the module's classes. exec() keeps this handler's __globals__ clean.
+    
     Args:
         environ: WSGI environment dict
         start_response: WSGI start_response callable
