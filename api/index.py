@@ -32,7 +32,7 @@ import sys
 import os
 import io
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 # Set up Python path to allow importing morss modules
 # This is necessary because the morss package is in the parent directory
@@ -53,16 +53,21 @@ class handler(BaseHTTPRequestHandler):
     Vercel's HTTP server interface and the WSGI application interface used by morss.
     """
     
-    def do_GET(self):
+    def _build_wsgi_environ(self, request_method, wsgi_input):
         """
-        Handle GET requests by converting them to WSGI format and calling the application.
+        Build a WSGI environ dictionary from the HTTP request.
+        
+        Args:
+            request_method: HTTP method (GET, POST, etc.)
+            wsgi_input: File-like object for request body
+            
+        Returns:
+            WSGI environ dictionary
         """
-        # Parse the URL
         parsed_url = urlparse(self.path)
         
-        # Build WSGI environ dictionary
         environ = {
-            'REQUEST_METHOD': 'GET',
+            'REQUEST_METHOD': request_method,
             'SCRIPT_NAME': '',
             'PATH_INFO': parsed_url.path or '/',
             'QUERY_STRING': parsed_url.query or '',
@@ -73,7 +78,7 @@ class handler(BaseHTTPRequestHandler):
             'SERVER_PROTOCOL': self.request_version,
             'wsgi.version': (1, 0),
             'wsgi.url_scheme': 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http',
-            'wsgi.input': io.BytesIO(),
+            'wsgi.input': wsgi_input,
             'wsgi.errors': sys.stderr,
             'wsgi.multithread': True,
             'wsgi.multiprocess': False,
@@ -88,6 +93,15 @@ class handler(BaseHTTPRequestHandler):
         # Special handling for REQUEST_URI (for compatibility with morss)
         environ['REQUEST_URI'] = self.path
         
+        return environ
+    
+    def _handle_wsgi_request(self, environ):
+        """
+        Execute the WSGI application and send the response.
+        
+        Args:
+            environ: WSGI environ dictionary
+        """
         # Response tracking
         self.response_status = None
         self.response_headers = []
@@ -122,78 +136,23 @@ class handler(BaseHTTPRequestHandler):
             # Handle errors gracefully
             self.send_error(500, f"Internal Server Error: {str(e)}")
     
+    def do_GET(self):
+        """
+        Handle GET requests by converting them to WSGI format and calling the application.
+        """
+        environ = self._build_wsgi_environ('GET', io.BytesIO())
+        self._handle_wsgi_request(environ)
+    
     def do_POST(self):
         """
         Handle POST requests by converting them to WSGI format and calling the application.
         """
-        # Parse the URL
-        parsed_url = urlparse(self.path)
-        
         # Read POST data
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length) if content_length > 0 else b''
         
-        # Build WSGI environ dictionary
-        environ = {
-            'REQUEST_METHOD': 'POST',
-            'SCRIPT_NAME': '',
-            'PATH_INFO': parsed_url.path or '/',
-            'QUERY_STRING': parsed_url.query or '',
-            'CONTENT_TYPE': self.headers.get('Content-Type', ''),
-            'CONTENT_LENGTH': str(content_length),
-            'SERVER_NAME': self.headers.get('Host', 'localhost').split(':')[0],
-            'SERVER_PORT': self.headers.get('Host', 'localhost:80').split(':')[-1] if ':' in self.headers.get('Host', '') else '80',
-            'SERVER_PROTOCOL': self.request_version,
-            'wsgi.version': (1, 0),
-            'wsgi.url_scheme': 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http',
-            'wsgi.input': io.BytesIO(post_data),
-            'wsgi.errors': sys.stderr,
-            'wsgi.multithread': True,
-            'wsgi.multiprocess': False,
-            'wsgi.run_once': False,
-        }
-        
-        # Add HTTP headers to environ
-        for header, value in self.headers.items():
-            header_name = 'HTTP_' + header.upper().replace('-', '_')
-            environ[header_name] = value
-        
-        # Special handling for REQUEST_URI (for compatibility with morss)
-        environ['REQUEST_URI'] = self.path
-        
-        # Response tracking
-        self.response_status = None
-        self.response_headers = []
-        
-        def start_response(status, headers, exc_info=None):
-            """WSGI start_response callable."""
-            self.response_status = status
-            self.response_headers = headers
-            return lambda data: None  # Write callable (not used in most cases)
-        
-        try:
-            # Call the WSGI application
-            response_data = application(environ, start_response)
-            
-            # Send response status
-            status_code = int(self.response_status.split(' ', 1)[0]) if self.response_status else 200
-            self.send_response(status_code)
-            
-            # Send response headers
-            for header_name, header_value in self.response_headers:
-                self.send_header(header_name, header_value)
-            self.end_headers()
-            
-            # Send response body
-            for data in response_data:
-                if isinstance(data, bytes):
-                    self.wfile.write(data)
-                else:
-                    self.wfile.write(data.encode('utf-8'))
-                    
-        except Exception as e:
-            # Handle errors gracefully
-            self.send_error(500, f"Internal Server Error: {str(e)}")
+        environ = self._build_wsgi_environ('POST', io.BytesIO(post_data))
+        self._handle_wsgi_request(environ)
     
     def log_message(self, format, *args):
         """

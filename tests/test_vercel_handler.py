@@ -16,7 +16,7 @@ import sys
 import os
 import io
 from http.server import BaseHTTPRequestHandler
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
