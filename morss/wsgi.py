@@ -21,7 +21,6 @@ import os.path
 import re
 import sys
 import wsgiref.handlers
-import wsgiref.simple_server
 import wsgiref.util
 
 import lxml.etree
@@ -287,6 +286,7 @@ def cgi_start_server():
     to avoid exposing it in the WSGI application's globals (which would break
     Vercel's serverless runtime).
     """
+    import wsgiref.simple_server
     from .server import WSGIRequestHandlerRequestUri
     
     caching.default_cache.autotrim()

@@ -23,7 +23,7 @@ Vercel serverless function entry point for Morss.
 
 This module provides a clean WSGI application entry point for Vercel's Python runtime.
 
-IMPORTANT: Why the isolation of WSGIRequestHandlerRequestUri matters:
+IMPORTANT: Why complete isolation from wsgiref.simple_server is critical:
 
 Vercel's Python runtime (/var/task/vc__handler__python.py) inspects the handler module
 and checks if any objects in the module's namespace are subclasses of BaseHTTPRequestHandler.
@@ -33,21 +33,25 @@ The inspection code looks something like:
         if not issubclass(base, BaseHTTPRequestHandler):
             ...
 
-The problem: When importing the WSGI application from morss.wsgi, if the
-WSGIRequestHandlerRequestUri class (which inherits from BaseHTTPRequestHandler) is
-defined in the same module, it ends up in the application function's __globals__
-dictionary. Vercel's runtime then encounters this class during inspection, which
-can cause a "TypeError: issubclass() arg 1 must be a class" error.
+The problem occurs at TWO levels:
+1. Direct class definitions: If WSGIRequestHandlerRequestUri (which inherits from 
+   BaseHTTPRequestHandler) is defined in morss.wsgi, it ends up in the application 
+   function's __globals__, causing Vercel's inspection to fail.
 
-The solution:
-1. WSGIRequestHandlerRequestUri is now isolated in morss/server.py
-2. It's only imported locally within cgi_start_server() for standalone server mode
-3. The WSGI application's __globals__ no longer contains BaseHTTPRequestHandler subclasses
-4. Vercel's runtime can safely load and inspect the handler module
+2. Module imports: Even if the class is moved, importing wsgiref.simple_server at the
+   module level exposes wsgiref.simple_server.WSGIRequestHandler (which also inherits
+   from BaseHTTPRequestHandler) through the module namespace, triggering the same error.
+
+The complete solution:
+1. WSGIRequestHandlerRequestUri is isolated in morss/server.py
+2. wsgiref.simple_server is imported locally within cgi_start_server() only
+3. Both the custom class AND the wsgiref.simple_server module are kept out of the
+   WSGI application's __globals__
+4. Vercel's runtime can safely load and inspect the handler module without encountering
+   any BaseHTTPRequestHandler subclasses
 5. The application works correctly in both serverless (Vercel) and standalone modes
 
-This approach keeps the code simple while ensuring compatibility with Vercel's
-serverless runtime inspection mechanism.
+This approach ensures complete isolation while maintaining full functionality.
 """
 
 import sys
