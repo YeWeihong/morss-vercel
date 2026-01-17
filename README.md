@@ -61,6 +61,20 @@ These documents explain:
 - Autonomy of local Docker deployments
 - What happens if upstream services become unavailable
 
+### Full-Text Extraction Mechanism
+
+Learn how Morss extracts full-text content from articles and why some articles succeed while others fail:
+- **[全文抓取原理详解.md](全文抓取原理详解.md)** - 全文抓取机制完整解析（中文）
+
+This guide explains:
+- How the full-text extraction algorithm (readabilite) works
+- Difference between full-text mode and original mode (--proxy)
+- Why some articles can be extracted successfully while others cannot
+- Scoring system for HTML nodes and content selection
+- How to improve extraction success rate with custom XPath rules
+- Common failure scenarios and solutions
+- Technical details and source code analysis
+
 ### Custom XPath Feeds
 
 Learn how to create RSS feeds from any webpage using custom XPath rules:
