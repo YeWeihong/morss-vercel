@@ -103,6 +103,54 @@ class Options:
     get = __getitem__ = __getattr__
 
 
+def extract_target_from_proxy(web_proxy):
+    """
+    Extract the target base URL from a web proxy URL.
+    
+    Args:
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/https/target.com')
+    
+    Returns:
+        The target base URL (e.g., 'https://target.com') or None if not found
+    
+    Examples:
+        'https://proxy.saha.qzz.io/https/www.target.com' -> 'https://www.target.com'
+        'https://sitedl.westpan.me/123/https/t66y.com' -> 'https://t66y.com'
+        'https://proxy.com/view/http://target.com' -> 'http://target.com'
+    """
+    # Remove trailing slash
+    web_proxy = web_proxy.rstrip('/')
+    
+    # Try to find embedded URL in two patterns:
+    # Pattern 1: .../http://domain or .../https://domain (full URL with :// in path)
+    # Pattern 2: .../http/domain or .../https/domain (protocol and domain separated)
+    
+    # Look for http:// or https:// in the path (after the proxy domain)
+    # Search for last occurrence of /http:// or /https://
+    for protocol in ['https://', 'http://']:
+        search_str = '/' + protocol
+        idx = web_proxy.rfind(search_str)
+        if idx != -1 and idx > 7:  # Make sure it's not the beginning of the URL
+            # Extract the embedded URL
+            return web_proxy[idx + 1:]
+    
+    # Pattern 2: Protocol and domain separated by slashes
+    # Split the proxy URL by '/'
+    parts = web_proxy.split('/')
+    
+    # Look for protocol indicators (http or https) in the path
+    # Format: https://proxy.domain/{arbitrary_path}/{protocol}/{target.domain}
+    for i, part in enumerate(parts[3:], start=3):  # Start after scheme and domain
+        if part in ('http', 'https'):
+            # Found protocol indicator, next part should be the target domain
+            if i + 1 < len(parts):
+                target_protocol = part
+                target_domain = parts[i + 1]
+                return f"{target_protocol}://{target_domain}"
+    
+    return None
+
+
 def web_proxy_join(web_proxy, relative_link):
     """
     Concatenate web_proxy prefix with relative link, handling double slashes.
@@ -153,11 +201,23 @@ def ItemFix(item, options, feedurl='/'):
 
     # check relative urls
     if options.web_proxy:
-        # Use web proxy prefix concatenation for relative URLs only
+        # Use web proxy prefix concatenation
         parsed = urlparse(item.link)
-        if not parsed.scheme:  # relative URL (no scheme like http://)
+        
+        if not parsed.scheme:
+            # Relative URL (no scheme like http://) - just concatenate with proxy
             item.link = web_proxy_join(options.web_proxy, item.link)
-        # else: keep absolute URLs as-is
+        else:
+            # Absolute URL - check if it's from the target domain
+            target_base = extract_target_from_proxy(options.web_proxy)
+            if target_base and item.link.startswith(target_base):
+                # Convert absolute URL from target domain to use proxy
+                # Extract the path from the absolute URL
+                path = item.link[len(target_base):]
+                if not path:
+                    path = '/'
+                item.link = web_proxy_join(options.web_proxy, path)
+            # else: keep URLs from other domains as-is
     else:
         # Standard URL resolution
         item.link = urljoin(feedurl, item.link)

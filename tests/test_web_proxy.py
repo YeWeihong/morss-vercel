@@ -103,10 +103,10 @@ def test_itemfix_without_web_proxy():
 
 
 def test_itemfix_with_absolute_link_and_web_proxy():
-    """Test ItemFix function with absolute link and web_proxy - should NOT apply proxy to absolute URLs"""
+    """Test ItemFix function with absolute link and web_proxy - external URLs should NOT be modified"""
     from morss.morss import ItemFix
     
-    # Create mock item with absolute link
+    # Create mock item with absolute link from external domain
     item = MockItem(link="http://example.com/article/123.html", title="Test Article")
     
     # Create options with web_proxy
@@ -115,5 +115,39 @@ def test_itemfix_with_absolute_link_and_web_proxy():
     # Call ItemFix
     result = ItemFix(item, options, feedurl="http://target.com")
     
-    # Absolute URLs should NOT be modified when web_proxy is used
+    # Absolute URLs from external domains should NOT be modified when web_proxy is used
     assert result.link == "http://example.com/article/123.html"
+
+
+def test_itemfix_with_absolute_link_from_target_domain_and_web_proxy():
+    """Test ItemFix function with absolute link from target domain with web_proxy - should convert to proxy URL"""
+    from morss.morss import ItemFix
+    
+    # Create mock item with absolute link from target domain
+    item = MockItem(link="http://target.com/article/123.html", title="Test Article")
+    
+    # Create options with web_proxy
+    options = Options(web_proxy="https://proxy.com/view/http://target.com")
+    
+    # Call ItemFix
+    result = ItemFix(item, options, feedurl="http://target.com")
+    
+    # Absolute URLs from target domain should be converted to use proxy
+    assert result.link == "https://proxy.com/view/http://target.com/article/123.html"
+
+
+def test_itemfix_with_absolute_link_from_target_domain_pattern2():
+    """Test ItemFix with absolute link from target domain using protocol/domain pattern"""
+    from morss.morss import ItemFix
+    
+    # Create mock item with absolute link from target domain
+    item = MockItem(link="https://www.target.com/htm_data/2601/", title="Test Article")
+    
+    # Create options with web_proxy (pattern 2: https/domain)
+    options = Options(web_proxy="https://proxy.saha.qzz.io/https/www.target.com")
+    
+    # Call ItemFix
+    result = ItemFix(item, options, feedurl="https://www.target.com")
+    
+    # Absolute URLs from target domain should be converted to use proxy
+    assert result.link == "https://proxy.saha.qzz.io/https/www.target.com/htm_data/2601/"
