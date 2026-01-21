@@ -127,10 +127,11 @@ def extract_target_from_proxy(web_proxy):
     
     # Look for http:// or https:// in the path (after the proxy domain)
     # Search for last occurrence of /http:// or /https://
+    MIN_SCHEME_LENGTH = len('http://')  # Minimum length for a valid URL scheme
     for protocol in ['https://', 'http://']:
         search_str = '/' + protocol
         idx = web_proxy.rfind(search_str)
-        if idx != -1 and idx > 7:  # Make sure it's not the beginning of the URL
+        if idx != -1 and idx > MIN_SCHEME_LENGTH:  # Make sure it's not the beginning of the URL
             # Extract the embedded URL
             return web_proxy[idx + 1:]
     
@@ -212,7 +213,10 @@ def ItemFix(item, options, feedurl='/'):
             target_base = extract_target_from_proxy(options.web_proxy)
             if target_base and item.link.startswith(target_base):
                 # Convert absolute URL from target domain to use proxy
-                # Extract the path from the absolute URL
+                # Extract the path component by removing the target_base prefix
+                # This correctly handles cases where target_base includes subpaths
+                # e.g., if target_base='https://example.com/sub' and item.link='https://example.com/sub/page'
+                # then path='/page' which is the relative portion after the base
                 path = item.link[len(target_base):]
                 if not path:
                     path = '/'
