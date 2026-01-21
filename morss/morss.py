@@ -103,6 +103,28 @@ class Options:
     get = __getitem__ = __getattr__
 
 
+def web_proxy_join(web_proxy, relative_link):
+    """
+    Concatenate web_proxy prefix with relative link, handling double slashes.
+    
+    Args:
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http://target.com')
+        relative_link: The relative link extracted from the page (e.g., '/foo/bar.html')
+    
+    Returns:
+        The concatenated URL with proper slash handling
+    """
+    # Remove trailing slash from proxy if present
+    web_proxy = web_proxy.rstrip('/')
+    
+    # Ensure relative_link starts with a slash
+    if not relative_link.startswith('/'):
+        relative_link = '/' + relative_link
+    
+    # Concatenate
+    return web_proxy + relative_link
+
+
 def ItemFix(item, options, feedurl='/'):
     """ Improves feed items (absolute links, resolve feedburner links, etc) """
 
@@ -130,7 +152,12 @@ def ItemFix(item, options, feedurl='/'):
             log(item.link)
 
     # check relative urls
-    item.link = urljoin(feedurl, item.link)
+    if options.web_proxy:
+        # Use web proxy prefix concatenation instead of standard urljoin
+        item.link = web_proxy_join(options.web_proxy, item.link)
+    else:
+        # Standard URL resolution
+        item.link = urljoin(feedurl, item.link)
 
     # google translate
     if fnmatch(item.link, 'http://translate.google.*/translate*u=*'):
