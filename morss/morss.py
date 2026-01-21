@@ -153,8 +153,11 @@ def ItemFix(item, options, feedurl='/'):
 
     # check relative urls
     if options.web_proxy:
-        # Use web proxy prefix concatenation instead of standard urljoin
-        item.link = web_proxy_join(options.web_proxy, item.link)
+        # Use web proxy prefix concatenation for relative URLs only
+        parsed = urlparse(item.link)
+        if not parsed.scheme:  # relative URL (no scheme like http://)
+            item.link = web_proxy_join(options.web_proxy, item.link)
+        # else: keep absolute URLs as-is
     else:
         # Standard URL resolution
         item.link = urljoin(feedurl, item.link)

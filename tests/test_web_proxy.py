@@ -103,7 +103,7 @@ def test_itemfix_without_web_proxy():
 
 
 def test_itemfix_with_absolute_link_and_web_proxy():
-    """Test ItemFix function with absolute link and web_proxy"""
+    """Test ItemFix function with absolute link and web_proxy - should NOT apply proxy to absolute URLs"""
     from morss.morss import ItemFix
     
     # Create mock item with absolute link
@@ -115,6 +115,5 @@ def test_itemfix_with_absolute_link_and_web_proxy():
     # Call ItemFix
     result = ItemFix(item, options, feedurl="http://target.com")
     
-    # When link is absolute, web_proxy_join will still process it
-    # This is the expected behavior - user can choose not to use web_proxy for absolute links
-    assert "proxy.com" in result.link or "example.com" in result.link
+    # Absolute URLs should NOT be modified when web_proxy is used
+    assert result.link == "http://example.com/article/123.html"
