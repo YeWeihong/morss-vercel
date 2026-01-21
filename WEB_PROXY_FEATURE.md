@@ -49,7 +49,19 @@ https://proxy.com/view/http://target.com/foo/bar.html
 https://sitedl.westpan.me/123/https/t66y.com/article/123.html
 ```
 
-#### Scenario 3: Without Web Proxy (Standard Behavior)
+#### Scenario 3: Absolute URLs with Web Proxy
+
+**Input:**
+- `web_proxy`: `https://proxy.com/view/http://target.com`
+- Extracted link: `http://example.com/article/123.html` (absolute URL)
+
+**Result:**
+```
+http://example.com/article/123.html
+```
+*Note: Absolute URLs are preserved unchanged to avoid breaking external links*
+
+#### Scenario 4: Without Web Proxy (Standard Behavior)
 
 **Input:**
 - No `web_proxy` parameter
@@ -67,15 +79,18 @@ http://target.com/article/123.html
 
 The implementation is in `morss/morss.py`:
 
-1. **Helper Function:** `web_proxy_join(web_proxy, relative_link)`
+1. **Helper Function:** `web_proxy_join(web_proxy, relative_link)` (Public API)
    - Concatenates web proxy prefix with relative links
    - Handles double slashes properly
    - Ensures proper slash formatting
+   - Can be imported and used directly: `from morss.morss import web_proxy_join`
 
 2. **Modified Function:** `ItemFix(item, options, feedurl='/')`
    - Checks for `options.web_proxy`
-   - Uses `web_proxy_join()` when web_proxy is provided
-   - Falls back to standard `urljoin()` otherwise
+   - Uses `urlparse()` to determine if link is relative (no scheme)
+   - Applies `web_proxy_join()` only for relative URLs when web_proxy is provided
+   - Preserves absolute URLs unchanged
+   - Falls back to standard `urljoin()` when web_proxy is not provided
 
 ### Slash Handling
 
@@ -121,7 +136,8 @@ web_proxy=https:||proxy.com|view|http:||target.com
 ### Limitations
 
 - The feature assumes relative links start with `/` or can be prefixed with `/`
-- For absolute URLs, the web_proxy will still be applied (by design)
+- The web_proxy is only applied to relative URLs (URLs without a scheme like `http://`)
+- Absolute URLs are preserved unchanged to avoid breaking external links
 - Users should only use this feature when accessing sites through web proxies
 
 ## Examples
