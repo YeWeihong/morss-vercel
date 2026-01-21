@@ -49,19 +49,31 @@ https://proxy.com/view/http://target.com/foo/bar.html
 https://sitedl.westpan.me/123/https/t66y.com/article/123.html
 ```
 
-#### Scenario 3: Absolute URLs with Web Proxy
+#### Scenario 3: Absolute URLs from Target Domain with Web Proxy
 
 **Input:**
 - `web_proxy`: `https://proxy.com/view/http://target.com`
-- Extracted link: `http://example.com/article/123.html` (absolute URL)
+- Extracted link: `http://target.com/article/123.html` (absolute URL from target domain)
+
+**Result:**
+```
+https://proxy.com/view/http://target.com/article/123.html
+```
+*Note: Absolute URLs from the target domain are now converted to use the proxy URL to ensure images and full content are accessible*
+
+#### Scenario 4: Absolute URLs from External Domains with Web Proxy
+
+**Input:**
+- `web_proxy`: `https://proxy.com/view/http://target.com`
+- Extracted link: `http://example.com/article/123.html` (absolute URL from external domain)
 
 **Result:**
 ```
 http://example.com/article/123.html
 ```
-*Note: Absolute URLs are preserved unchanged to avoid breaking external links*
+*Note: Absolute URLs from external domains are preserved unchanged*
 
-#### Scenario 4: Without Web Proxy (Standard Behavior)
+#### Scenario 5: Without Web Proxy (Standard Behavior)
 
 **Input:**
 - No `web_proxy` parameter
@@ -79,17 +91,27 @@ http://target.com/article/123.html
 
 The implementation is in `morss/morss.py`:
 
-1. **Helper Function:** `web_proxy_join(web_proxy, relative_link)` (Public API)
+1. **Helper Function:** `extract_target_from_proxy(web_proxy)` (Public API)
+   - Extracts the target base URL from a web proxy URL
+   - Supports two patterns:
+     - Pattern 1: `.../http://domain` or `.../https://domain` (full URL with :// in path)
+     - Pattern 2: `.../http/domain` or `.../https/domain` (protocol and domain separated)
+   - Returns the target base URL (e.g., `https://target.com`) or None if not found
+   - Can be imported and used directly: `from morss.morss import extract_target_from_proxy`
+
+2. **Helper Function:** `web_proxy_join(web_proxy, relative_link)` (Public API)
    - Concatenates web proxy prefix with relative links
    - Handles double slashes properly
    - Ensures proper slash formatting
    - Can be imported and used directly: `from morss.morss import web_proxy_join`
 
-2. **Modified Function:** `ItemFix(item, options, feedurl='/')`
+3. **Modified Function:** `ItemFix(item, options, feedurl='/')`
    - Checks for `options.web_proxy`
    - Uses `urlparse()` to determine if link is relative (no scheme)
-   - Applies `web_proxy_join()` only for relative URLs when web_proxy is provided
-   - Preserves absolute URLs unchanged
+   - For relative URLs: applies `web_proxy_join()` to concatenate with proxy
+   - For absolute URLs: extracts target domain using `extract_target_from_proxy()`
+     - If the absolute URL starts with the target domain, converts it to use proxy
+     - Otherwise, preserves the URL unchanged (external links)
    - Falls back to standard `urljoin()` when web_proxy is not provided
 
 ### Slash Handling
@@ -111,9 +133,11 @@ The feature includes comprehensive test coverage in `tests/test_web_proxy.py`:
 - ✓ Complex proxy URLs
 - ✓ Integration with ItemFix function
 - ✓ Standard behavior without web_proxy
-- ✓ Absolute link handling
+- ✓ External absolute link handling (preserved)
+- ✓ Target domain absolute link handling (converted to proxy)
+- ✓ Multiple proxy URL patterns
 
-All 8 tests pass, and all 85 existing tests continue to pass.
+All 10 tests pass, and all existing tests continue to pass.
 
 ## Technical Notes
 
@@ -136,8 +160,10 @@ web_proxy=https:||proxy.com|view|http:||target.com
 ### Limitations
 
 - The feature assumes relative links start with `/` or can be prefixed with `/`
-- The web_proxy is only applied to relative URLs (URLs without a scheme like `http://`)
-- Absolute URLs are preserved unchanged to avoid breaking external links
+- The web_proxy is applied to:
+  - Relative URLs (URLs without a scheme like `http://`)
+  - Absolute URLs from the target domain extracted from the proxy URL
+- Absolute URLs from external domains are preserved unchanged
 - Users should only use this feature when accessing sites through web proxies
 
 ## Examples
