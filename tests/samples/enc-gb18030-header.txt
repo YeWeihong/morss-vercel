@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+content-type: text/plain; charset=gb18030
+
+中国新闻周刊提供深度报道

@@ -32,13 +32,15 @@ def test_gzip_handler(replay_server, opener):
 @pytest.mark.parametrize('opener', [custom_opener(), build_opener(EncodingFixHandler())])
 @pytest.mark.parametrize('url', [
     'enc-gb2312-header.txt', 'enc-gb2312-meta.txt', #'enc-gb2312-missing.txt',
+    'enc-gbk-header.txt', 'enc-gbk-meta.txt',
+    'enc-gb18030-header.txt',
     'enc-iso-8859-1-header.txt', 'enc-iso-8859-1-missing.txt',
     'enc-utf-8-header.txt',
     ])
 def test_encoding_fix_handler(replay_server, opener, url):
     out = adv_get('http://localhost:8888/%s' % url)
     out = out['data'].decode(out['encoding'])
-    assert 'succes' in out or 'succès' in out or '成功' in out
+    assert 'succes' in out or 'succès' in out or '成功' in out or '中国' in out
 
 @pytest.mark.parametrize('opener', [custom_opener(follow='rss'), build_opener(AlternateHandler(MIMETYPE['rss']))])
 def test_alternate_handler(replay_server, opener):
