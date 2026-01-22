@@ -336,10 +336,11 @@ def detect_raw_encoding(data, resp=None):
     # Use a more representative sample for chardet: start + middle + end
     # This helps detect encoding more accurately, especially for pages with
     # mixed content or when encoding hints are at the beginning
-    sample_size = min(len(data), 6000)
-    if len(data) > sample_size:
+    if len(data) > 6000:
         # Take samples from beginning, middle, and end
-        sample = data[:2000] + data[len(data)//2-1000:len(data)//2+1000] + data[-2000:]
+        mid_start = max(0, len(data)//2 - 1000)
+        mid_end = len(data)//2 + 1000
+        sample = data[:2000] + data[mid_start:mid_end] + data[-2000:]
     else:
         sample = data
     
