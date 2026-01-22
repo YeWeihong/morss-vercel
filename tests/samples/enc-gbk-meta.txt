@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+content-type: text/html
+
+
+<!DOCTYPE html>
+<html>
+<head><meta charset="gbk"/></head>
+<body>
+中国新闻周刊提供深度报道
+</body></html>

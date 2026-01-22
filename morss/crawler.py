@@ -306,7 +306,10 @@ class GZIPHandler(RespDataHandler):
 def detect_encoding(data, resp=None):
     enc = detect_raw_encoding(data, resp)
 
-    if enc.lower() == 'gb2312':
+    # Normalize Chinese encodings to GBK for better compatibility
+    # GB2312 is a subset of GBK, and GB18030 is a superset of GBK
+    # Using GBK provides the best balance for decoding Chinese content
+    if enc.lower() in ('gb2312', 'gbk', 'gb18030'):
         enc = 'gbk'
 
     return enc
@@ -330,7 +333,18 @@ def detect_raw_encoding(data, resp=None):
     if match:
         return match.groups()[0].lower().decode()
 
-    enc = chardet.detect(data[-2000:])['encoding']
+    # Use a more representative sample for chardet: start + middle + end
+    # This helps detect encoding more accurately, especially for pages with
+    # mixed content or when encoding hints are at the beginning
+    if len(data) > 6000:
+        # Take samples from beginning, middle, and end
+        mid_start = max(0, len(data)//2 - 1000)
+        mid_end = len(data)//2 + 1000
+        sample = data[:2000] + data[mid_start:mid_end] + data[-2000:]
+    else:
+        sample = data
+    
+    enc = chardet.detect(sample)['encoding']
     if enc and enc != 'ascii':
         return enc
 
