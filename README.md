@@ -88,6 +88,20 @@ These guides explain:
 - Complete examples with real-world scenarios
 - Debugging tips and troubleshooting
 
+### Web Proxy Feature
+
+Learn how to use web proxy wrappers to access blocked sites while correctly resolving URLs:
+- **[WEB_PROXY_QUICKSTART_CN.md](WEB_PROXY_QUICKSTART_CN.md)** - 快速参考指南（中文）⚡
+- **[WEB_PROXY_FEATURE.md](WEB_PROXY_FEATURE.md)** - Web Proxy feature documentation (English)
+- **[WEB_PROXY_FEATURE_CN.md](WEB_PROXY_FEATURE_CN.md)** - Web Proxy 代理功能详解（中文）
+
+These guides explain:
+- How to use `--web_proxy` parameter with proxy services
+- URL resolution with web proxies
+- Combining web proxy with custom XPath rules
+- Complete examples with real-world proxy services
+- Troubleshooting proxy-related issues
+
 #### 🎯 Visual XPath Selector Tool
 
 When running Morss as a web server, access the **XPath Selector Tool** at:
