@@ -157,7 +157,7 @@ def web_proxy_join(web_proxy, relative_link):
     Concatenate web_proxy prefix with relative link, handling double slashes.
     
     Args:
-        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http://target.com')
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http/target.com')
         relative_link: The relative link extracted from the page (e.g., '/foo/bar.html')
     
     Returns:
@@ -172,6 +172,65 @@ def web_proxy_join(web_proxy, relative_link):
     
     # Concatenate
     return web_proxy + relative_link
+
+
+def convert_absolute_url_to_proxy(web_proxy, absolute_url):
+    """
+    Convert an absolute URL to use the web proxy format.
+    
+    Args:
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http/target.com')
+        absolute_url: The absolute URL to convert (e.g., 'https://example.com/page')
+    
+    Returns:
+        The proxied URL
+    
+    Examples:
+        web_proxy='https://proxy.com/view/http/target.com'  (Pattern 2)
+        absolute_url='https://example.com/page'
+        
+        Returns: 'https://proxy.com/view/https/example.com/page'
+        
+        Supports both Pattern 1 (http://domain) and Pattern 2 (http/domain) proxy formats.
+    """
+    # Parse the web_proxy to understand its format
+    # Try to detect if it uses pattern 1 (embedded ://) or pattern 2 (protocol/domain)
+    
+    # Minimum length to ensure we're not matching the proxy's own protocol
+    MIN_PROTOCOL_LENGTH = len('http://')
+    
+    # First, check if web_proxy contains embedded URL with ://
+    if '/http://' in web_proxy or '/https://' in web_proxy:
+        # Pattern 1: embedded URL format (e.g., 'https://proxy.com/view/http://target.com')
+        # Extract the proxy base (everything before the last embedded URL)
+        # Use rfind to get the last occurrence, which should be the target URL
+        for protocol in ['https://', 'http://']:
+            search_str = '/' + protocol
+            idx = web_proxy.rfind(search_str)
+            # Verify this is after the proxy's own protocol (at least MIN_PROTOCOL_LENGTH chars in)
+            if idx != -1 and idx > MIN_PROTOCOL_LENGTH:
+                proxy_base = web_proxy[:idx]
+                # Construct new proxied URL by appending the absolute URL
+                return proxy_base + '/' + absolute_url
+    
+    # Pattern 2: protocol/domain format (e.g., 'https://proxy.com/123/https/target.com')
+    parts = web_proxy.split('/')
+    for i, part in enumerate(parts[3:], start=3):
+        if part in ('http', 'https'):
+            # Found protocol separator, proxy base is everything before it
+            proxy_base = '/'.join(parts[:i])
+            # Parse the absolute URL to get protocol and rest
+            parsed = urlparse(absolute_url)
+            protocol = parsed.scheme  # 'http' or 'https'
+            # domain and path combined - remove the scheme and '://'
+            domain_and_path = absolute_url[len(parsed.scheme + '://'):]
+            # Construct new proxied URL
+            return proxy_base + '/' + protocol + '/' + domain_and_path
+    
+    # Fallback: if we can't determine the pattern, return the original URL
+    # This is safer than trying string replacement which could fail
+    log(f'Unable to determine proxy pattern for {web_proxy}, returning original URL {absolute_url}')
+    return absolute_url
 
 
 def ItemFix(item, options, feedurl='/'):
@@ -209,7 +268,7 @@ def ItemFix(item, options, feedurl='/'):
             # Relative URL (no scheme like http://) - just concatenate with proxy
             item.link = web_proxy_join(options.web_proxy, item.link)
         else:
-            # Absolute URL - check if it's from the target domain
+            # Absolute URL - need to convert to use proxy
             target_base = extract_target_from_proxy(options.web_proxy)
             if target_base and item.link.startswith(target_base):
                 # Convert absolute URL from target domain to use proxy
@@ -221,7 +280,9 @@ def ItemFix(item, options, feedurl='/'):
                 if not path:
                     path = '/'
                 item.link = web_proxy_join(options.web_proxy, path)
-            # else: keep URLs from other domains as-is
+            else:
+                # Absolute URL from another domain - also convert to use proxy
+                item.link = convert_absolute_url_to_proxy(options.web_proxy, item.link)
     else:
         # Standard URL resolution
         item.link = urljoin(feedurl, item.link)
