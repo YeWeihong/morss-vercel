@@ -103,7 +103,7 @@ def test_itemfix_without_web_proxy():
 
 
 def test_itemfix_with_absolute_link_and_web_proxy():
-    """Test ItemFix function with absolute link and web_proxy - external URLs should ALSO be proxied"""
+    """Test ItemFix function with absolute link and web_proxy - external URLs should also be proxied"""
     from morss.morss import ItemFix
     
     # Create mock item with absolute link from external domain
@@ -115,7 +115,7 @@ def test_itemfix_with_absolute_link_and_web_proxy():
     # Call ItemFix
     result = ItemFix(item, options, feedurl="http://target.com")
     
-    # Absolute URLs from external domains should ALSO be proxied when web_proxy is used
+    # Absolute URLs from external domains should also be proxied when web_proxy is used
     # The proxy format should convert the external URL to use the same proxy mechanism
     assert result.link == "https://proxy.com/view/http://example.com/article/123.html"
 

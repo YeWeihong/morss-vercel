@@ -196,16 +196,21 @@ def convert_absolute_url_to_proxy(web_proxy, absolute_url):
     # Parse the web_proxy to understand its format
     # Try to detect if it uses pattern 1 (embedded ://) or pattern 2 (protocol/domain)
     
+    # Minimum length to ensure we're not matching the proxy's own protocol
+    MIN_PROTOCOL_LENGTH = len('http://')
+    
     # First, check if web_proxy contains embedded URL with ://
     if '/http://' in web_proxy or '/https://' in web_proxy:
         # Pattern 1: embedded URL format (e.g., 'https://proxy.com/view/http://target.com')
-        # Extract the proxy base (everything before the embedded URL)
+        # Extract the proxy base (everything before the last embedded URL)
+        # Use rfind to get the last occurrence, which should be the target URL
         for protocol in ['https://', 'http://']:
             search_str = '/' + protocol
             idx = web_proxy.rfind(search_str)
-            if idx != -1 and idx > len('http://'):
+            # Verify this is after the proxy's own protocol (at least MIN_PROTOCOL_LENGTH chars in)
+            if idx != -1 and idx > MIN_PROTOCOL_LENGTH:
                 proxy_base = web_proxy[:idx]
-                # Construct new proxied URL
+                # Construct new proxied URL by appending the absolute URL
                 return proxy_base + '/' + absolute_url
     
     # Pattern 2: protocol/domain format (e.g., 'https://proxy.com/123/https/target.com')
@@ -217,18 +222,14 @@ def convert_absolute_url_to_proxy(web_proxy, absolute_url):
             # Parse the absolute URL to get protocol and rest
             parsed = urlparse(absolute_url)
             protocol = parsed.scheme  # 'http' or 'https'
-            # domain and path combined
-            domain_and_path = absolute_url[len(parsed.scheme) + 3:]  # Remove 'http://' or 'https://'
+            # domain and path combined - remove the scheme and '://'
+            domain_and_path = absolute_url[len(parsed.scheme + '://'):]
             # Construct new proxied URL
             return proxy_base + '/' + protocol + '/' + domain_and_path
     
-    # Fallback: if we can't determine the pattern, just replace the target with the new URL
-    # This may not always work but is a reasonable fallback
-    target_base = extract_target_from_proxy(web_proxy)
-    if target_base:
-        return web_proxy.replace(target_base, absolute_url)
-    
-    # Last resort: return original URL
+    # Fallback: if we can't determine the pattern, return the original URL
+    # This is safer than trying string replacement which could fail
+    log(f'Unable to determine proxy pattern for {web_proxy}, returning original URL {absolute_url}')
     return absolute_url
 
 
