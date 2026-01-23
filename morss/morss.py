@@ -157,7 +157,7 @@ def web_proxy_join(web_proxy, relative_link):
     Concatenate web_proxy prefix with relative link, handling double slashes.
     
     Args:
-        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http://target.com')
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http/target.com')
         relative_link: The relative link extracted from the page (e.g., '/foo/bar.html')
     
     Returns:
@@ -179,19 +179,19 @@ def convert_absolute_url_to_proxy(web_proxy, absolute_url):
     Convert an absolute URL to use the web proxy format.
     
     Args:
-        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http://target.com')
+        web_proxy: The web proxy prefix URL (e.g., 'https://proxy.com/view/http/target.com')
         absolute_url: The absolute URL to convert (e.g., 'https://example.com/page')
     
     Returns:
         The proxied URL
     
     Examples:
-        web_proxy='https://proxy.com/view/http://target.com'
+        web_proxy='https://proxy.com/view/http/target.com'  (Pattern 2)
         absolute_url='https://example.com/page'
         
-        Returns: 'https://proxy.com/view/https://example.com/page'
+        Returns: 'https://proxy.com/view/https/example.com/page'
         
-        This assumes the proxy format where protocols are embedded as 'http://...' or 'https://...'
+        Supports both Pattern 1 (http://domain) and Pattern 2 (http/domain) proxy formats.
     """
     # Parse the web_proxy to understand its format
     # Try to detect if it uses pattern 1 (embedded ://) or pattern 2 (protocol/domain)

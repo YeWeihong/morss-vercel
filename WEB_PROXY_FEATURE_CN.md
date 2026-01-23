@@ -59,11 +59,11 @@ relative_link = "/article/123.html"
 
 ```python
 # 使用代理时的问题
-feedurl = "https://proxy.com/view/http://target.com/feed"
+feedurl = "https://proxy.com/view/http/target.com/feed"
 relative_link = "/article/123.html"
 结果 = urljoin(feedurl, relative_link)
 # → "https://proxy.com/article/123.html"  ❌ 错误！
-# 应该是："https://proxy.com/view/http://target.com/article/123.html"
+# 应该是："https://proxy.com/view/http/target.com/article/123.html"
 ```
 
 ### Web Proxy 参数的解决方案
@@ -71,21 +71,21 @@ relative_link = "/article/123.html"
 使用 `web_proxy` 参数，morss 会正确处理所有类型的链接：
 
 ```python
-# 使用 web_proxy 参数
-web_proxy = "https://proxy.com/view/http://target.com"
+# 使用 web_proxy 参数（注意：协议和域名之间用 / 分隔，不是 ://）
+web_proxy = "https://proxy.com/view/http/target.com"
 
 # 1. 相对链接
 relative_link = "/article/123.html"
 结果 = web_proxy + relative_link
-# → "https://proxy.com/view/http://target.com/article/123.html"  ✅ 正确！
+# → "https://proxy.com/view/http/target.com/article/123.html"  ✅ 正确！
 
 # 2. 目标域的绝对链接
 target_absolute = "http://target.com/page/456.html"
-# → "https://proxy.com/view/http://target.com/page/456.html"  ✅ 正确！
+# → "https://proxy.com/view/http/target.com/page/456.html"  ✅ 正确！
 
 # 3. 外部域的绝对链接（也会通过代理访问）
 external_absolute = "https://cdn.example.com/image.jpg"
-# → "https://proxy.com/view/https://cdn.example.com/image.jpg"  ✅ 正确！
+# → "https://proxy.com/view/https/cdn.example.com/image.jpg"  ✅ 正确！
 ```
 
 **重要变更**：从现在开始，当提供 `web_proxy` 参数时，**所有链接**（包括相对链接、目标域的绝对链接和外部域的绝对链接）都会通过代理访问。这确保了在使用代理时，所有资源都能正确加载。
@@ -96,7 +96,7 @@ external_absolute = "https://cdn.example.com/image.jpg"
 
 ```bash
 morss \
-  --web_proxy=https://proxy.com/view/http://target.com \
+  --web_proxy=https://proxy.com/view/http/target.com \
   https://target.com/feed.xml
 ```
 
@@ -295,14 +295,17 @@ web_proxy=代理服务器URL/协议/目标网站域名
 
 **常见代理模式**：
 
-1. **模式 1**：完整 URL 路径
-   ```
-   https://proxy.com/view/http://target.com
-   https://proxy.com/view/https://target.com
-   ```
+**模式 2（推荐）**：协议和域名分离（大多数在线代理使用此格式）
+```
+https://proxy.saha.qzz.io/https/target.com
+https://sitedl.westpan.me/123/https/target.com
+```
 
-2. **模式 2**：协议和域名分离
-   ```
+**模式 1**：完整 URL 路径（较少见，但也支持）
+```
+https://proxy.com/view/http://target.com
+https://proxy.com/view/https://target.com
+```
    https://proxy.com/123/http/target.com
    https://proxy.com/123/https/target.com
    ```
@@ -434,7 +437,7 @@ print(f"编码：{xpath_encoded}")
 
 ```bash
 morss \
-  --web_proxy=https://proxy.com/view/http://blocked-site.com \
+  --web_proxy=https://proxy.com/view/http/blocked-site.com \
   http://blocked-site.com/feed.xml
 ```
 
@@ -637,7 +640,7 @@ def extract_target_from_proxy(web_proxy):
     
     示例：
     'https://proxy.com/https/target.com' -> 'https://target.com'
-    'https://proxy.com/view/http://target.com' -> 'http://target.com'
+    'https://proxy.com/view/http/target.com' -> 'http://target.com'
     """
     # 模式 1：查找 /http:// 或 /https://
     for protocol in ['https://', 'http://']:
@@ -662,13 +665,16 @@ def extract_target_from_proxy(web_proxy):
 
 Morss 支持两种常见的代理 URL 模式：
 
-**模式 1：完整 URL 路径**（最常见）
+**模式 2：协议和域名分离**（推荐，大多数在线代理使用此格式）
+```
+https://proxy.saha.qzz.io/https/target.com
+https://sitedl.westpan.me/123/https/target.com
+```
+
+**模式 1：完整 URL 路径**（较少见，但也支持）
 ```
 https://proxy.com/view/http://target.com
 https://proxy.com/view/https://target.com
-```
-
-**模式 2：协议和域名分离**
 ```
 https://proxy.com/123/http/target.com
 https://proxy.com/123/https/target.com

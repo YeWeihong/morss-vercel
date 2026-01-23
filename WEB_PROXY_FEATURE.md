@@ -27,20 +27,22 @@ This ensures that when using a proxy, all content is correctly loaded through th
 Add the `web_proxy` parameter to your morss request URL:
 
 ```
-https://your-morss-instance.vercel.app/:web_proxy=https://proxy.com/view/http://target.com/https://target.com/feed.xml
+https://your-morss-instance.vercel.app/:web_proxy=https://proxy.com/view/http/target.com/https://target.com/feed.xml
 ```
+
+**Important**: The proxy format uses `/http/` or `/https/` (not `://`) to separate the protocol from the domain.
 
 ### Example Scenarios
 
 #### Scenario 1: Basic Web Proxy Usage
 
 **Input:**
-- `web_proxy`: `https://proxy.com/view/http://target.com`
+- `web_proxy`: `https://proxy.com/view/http/target.com`
 - Extracted link: `/foo/bar.html`
 
 **Result:**
 ```
-https://proxy.com/view/http://target.com/foo/bar.html
+https://proxy.com/view/http/target.com/foo/bar.html
 ```
 
 #### Scenario 2: Complex Proxy with Path
@@ -57,24 +59,24 @@ https://sitedl.westpan.me/123/https/t66y.com/article/123.html
 #### Scenario 3: Absolute URLs from Target Domain with Web Proxy
 
 **Input:**
-- `web_proxy`: `https://proxy.com/view/http://target.com`
+- `web_proxy`: `https://proxy.com/view/http/target.com`
 - Extracted link: `http://target.com/article/123.html` (absolute URL from target domain)
 
 **Result:**
 ```
-https://proxy.com/view/http://target.com/article/123.html
+https://proxy.com/view/http/target.com/article/123.html
 ```
 *Note: Absolute URLs from the target domain are now converted to use the proxy URL to ensure images and full content are accessible*
 
 #### Scenario 4: Absolute URLs from External Domains with Web Proxy
 
 **Input:**
-- `web_proxy`: `https://proxy.com/view/http://target.com`
+- `web_proxy`: `https://proxy.com/view/http/target.com`
 - Extracted link: `http://example.com/article/123.html` (absolute URL from external domain)
 
 **Result:**
 ```
-https://proxy.com/view/http://example.com/article/123.html
+https://proxy.com/view/http/example.com/article/123.html
 ```
 *Note: **NEW BEHAVIOR** - Absolute URLs from external domains are now also proxied to ensure all resources are accessible through the proxy*
 
@@ -176,19 +178,19 @@ web_proxy=https:||proxy.com|view|http:||target.com
 ### CLI Usage
 
 ```bash
-python -m morss :web_proxy=https://proxy.com/view/http://target.com https://target.com/feed.xml
+python -m morss :web_proxy=https://proxy.com/view/http/target.com https://target.com/feed.xml
 ```
 
 ### HTTP Request
 
 ```
-GET /:web_proxy=https://proxy.com/view/http://target.com/https://target.com/feed.xml
+GET /:web_proxy=https://proxy.com/view/http/target.com/https://target.com/feed.xml
 ```
 
 ### Multiple Parameters
 
 ```
-GET /:web_proxy=https://proxy.com/view/http://target.com:md=True/https://target.com/feed.xml
+GET /:web_proxy=https://proxy.com/view/http/target.com:md=True/https://target.com/feed.xml
 ```
 
 ## Backward Compatibility
