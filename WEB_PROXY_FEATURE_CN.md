@@ -68,15 +68,27 @@ relative_link = "/article/123.html"
 
 ### Web Proxy 参数的解决方案
 
-使用 `web_proxy` 参数，morss 会正确拼接代理前缀和相对链接：
+使用 `web_proxy` 参数，morss 会正确处理所有类型的链接：
 
 ```python
 # 使用 web_proxy 参数
 web_proxy = "https://proxy.com/view/http://target.com"
+
+# 1. 相对链接
 relative_link = "/article/123.html"
 结果 = web_proxy + relative_link
 # → "https://proxy.com/view/http://target.com/article/123.html"  ✅ 正确！
+
+# 2. 目标域的绝对链接
+target_absolute = "http://target.com/page/456.html"
+# → "https://proxy.com/view/http://target.com/page/456.html"  ✅ 正确！
+
+# 3. 外部域的绝对链接（也会通过代理访问）
+external_absolute = "https://cdn.example.com/image.jpg"
+# → "https://proxy.com/view/https://cdn.example.com/image.jpg"  ✅ 正确！
 ```
+
+**重要变更**：从现在开始，当提供 `web_proxy` 参数时，**所有链接**（包括相对链接、目标域的绝对链接和外部域的绝对链接）都会通过代理访问。这确保了在使用代理时，所有资源都能正确加载。
 
 ## 基本使用方法
 

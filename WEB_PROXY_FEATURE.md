@@ -13,7 +13,12 @@ When using web proxy wrappers to access blocked sites:
 
 ## Solution
 
-The `web_proxy` parameter allows you to specify a web proxy prefix that will be concatenated with relative links instead of using standard URL resolution.
+The `web_proxy` parameter allows you to specify a web proxy prefix that will be used for ALL extracted links:
+- **Relative links** (e.g., `/article/123.html`) are concatenated with the proxy prefix
+- **Absolute links from the target domain** (e.g., `http://target.com/page`) are converted to use the proxy
+- **Absolute links from external domains** (e.g., `http://cdn.example.com/image.jpg`) are also proxied to ensure all resources are accessible
+
+This ensures that when using a proxy, all content is correctly loaded through the proxy service.
 
 ## Usage
 
@@ -69,9 +74,9 @@ https://proxy.com/view/http://target.com/article/123.html
 
 **Result:**
 ```
-http://example.com/article/123.html
+https://proxy.com/view/http://example.com/article/123.html
 ```
-*Note: Absolute URLs from external domains are preserved unchanged*
+*Note: **NEW BEHAVIOR** - Absolute URLs from external domains are now also proxied to ensure all resources are accessible through the proxy*
 
 #### Scenario 5: Without Web Proxy (Standard Behavior)
 
