@@ -1,4 +1,5 @@
 # 本项目适用于部署在vercel上！！
+[![Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YeWeihong/morss)
 # Morss - Get full-text RSS feeds
 
 [Homepage](https://morss.it/) • 
