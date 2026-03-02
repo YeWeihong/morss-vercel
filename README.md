@@ -1,3 +1,4 @@
+# 本项目适用于部署在vercel上！！
 # Morss - Get full-text RSS feeds
 
 [Homepage](https://morss.it/) • 
