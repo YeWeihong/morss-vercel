@@ -2,6 +2,12 @@
 一键部署，白嫖vercel免费服务器⬇️
 
 [![Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YeWeihong/morss)
+
+## Xpath自定义订阅
+
+<img width="776" height="402" alt="image" src="https://github.com/user-attachments/assets/334c238c-bd87-4650-9374-b2f121fd3f9d" />
+
+我推荐大家学一学Xpath的语法，并且使用自己输入的Xpath来抓取页面内容，例如针对[经济观察报](https://www.163.com/dy/media/T1374538327578.html)这个页面，在浏览器中右键，检查，你就能看到页面中的元素，具体的**Xpath语法**和**元素的提取**建议问问AI（本质上是找共同点），现在AI很强了！提取之后得到[订阅链接](https://morss-vercel.vercel.app/:proxy:items=%7C%7C*[class=title]/https:/www.163.com/dy/media/T1374538327578.html)中间那一大串就是与Xpath相关的的语法结构，去探索吧！
 # Morss - Get full-text RSS feeds
 
 [Homepage](https://morss.it/) • 
