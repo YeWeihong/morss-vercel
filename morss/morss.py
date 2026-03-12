@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import html as _html_module
 import os
 import re
 import sys
@@ -377,9 +378,13 @@ def ItemFill(item, options, feedurl='/', fast=False):
         log('empty page')
         return True
 
-    out = readabilite.get_article(req['data'], url=req['url'], encoding_in=req['encoding'], encoding_out='unicode', xpath=options.xpath)
+    article = readabilite._get_article_data(req['data'], url=req['url'], encoding_in=req['encoding'], xpath=options.xpath)
 
+    out = article['content']
     if out is not None:
+        main_image = article.get('main_image')
+        if main_image:
+            out = '<p><img src="{}" alt=""/></p>\n'.format(_html_module.escape(main_image, quote=True)) + out
         item.content = out
 
     if options.resolve:
