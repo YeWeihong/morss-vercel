@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import html as _html_module
+import json
 import re
+from urllib.parse import urljoin
 
 import bs4.builder._lxml
 import lxml.etree
@@ -31,6 +34,110 @@ except ImportError:
 
 # trafilatura 提取结果的最短有效长度（字符数）；低于此值视为提取失败，回退到原有算法
 MIN_TRAFILATURA_RESULT_LENGTH = 200
+
+# 图片页识别阈值（字符数）；trafilatura 结果低于此值时启用图片提取模式
+PHOTO_PAGE_THRESHOLD = 150
+
+# BeautifulSoup 图片筛选的最小宽度（像素）；明确小于此值的图片视为图标/缩略图
+MIN_IMAGE_WIDTH = 400
+
+# 用于过滤广告/logo/图标等无意义图片的 URL 关键词
+_BAD_IMAGE_RE = re.compile(
+    r'ad[s_/-]|logo|avatar|icon|banner|tracking|pixel|1x1|spinner|placeholder',
+    re.I,
+)
+
+# 匹配 og:image meta 标签（两种属性顺序均支持）
+_OG_IMAGE_RE = re.compile(
+    r'<meta[^>]+(?:'
+    r'property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
+    r'|content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']'
+    r')',
+    re.I | re.S,
+)
+
+# 匹配 <img src="..."> 中的 src 属性（含 <img> 整体替换）
+_IMG_SRC_RE = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.I)
+_IMG_SRC_ATTR_RE = re.compile(r'(<img\b[^>]+\bsrc=["\'])([^"\']+)(["\'])', re.I)
+
+# trafilatura 使用 <graphic> 标签表示图片，需转换为标准 <img>
+_GRAPHIC_TAG_RE = re.compile(r'<graphic\b([^>]*)>', re.I)
+
+# Markdown 格式的图片引用：![alt](url)
+_MARKDOWN_IMAGE_RE = re.compile(r'!\[[^\]]*\]\(([^)]+)\)')
+
+
+def _is_valid_image_src(src):
+    """判断图片 URL 是否有效（排除 data URI、广告图片等）。"""
+    if not src or src.startswith('data:'):
+        return False
+    if _BAD_IMAGE_RE.search(src):
+        return False
+    return True
+
+
+def _get_og_image(html_str, base_url=None):
+    """从原始 HTML 中提取 og:image 元标签中的图片 URL。"""
+    m = _OG_IMAGE_RE.search(html_str)
+    if m:
+        src = m.group(1) or m.group(2)
+        if src:
+            return urljoin(base_url, src) if base_url else src
+    return None
+
+
+def _convert_graphic_to_img(html_str):
+    """将 trafilatura 输出中的 <graphic ...> 标签转换为标准 <img ...> 标签。"""
+    return _GRAPHIC_TAG_RE.sub(lambda m: '<img' + m.group(1) + '>', html_str)
+
+
+def _extract_image_srcs(html_str, base_url=None):
+    """从 HTML 字符串中提取所有 <img src="..."> 的绝对 URL 列表（过滤无效图片）。"""
+    srcs = _IMG_SRC_RE.findall(html_str)
+    result = []
+    for src in srcs:
+        if not _is_valid_image_src(src):
+            continue
+        result.append(urljoin(base_url, src) if base_url else src)
+    return result
+
+
+def _extract_images_bs4(html_str, base_url=None):
+    """使用 BeautifulSoup 从原始 HTML 提取大图列表（宽度 ≥400 或无尺寸信息）。"""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html_str, 'html.parser')
+        images = []
+        for img in soup.find_all('img'):
+            src = (
+                img.get('src')
+                or img.get('data-src')
+                or img.get('data-original')
+                or ''
+            ).strip()
+            if not src or not _is_valid_image_src(src):
+                continue
+            if base_url:
+                src = urljoin(base_url, src)
+            # 过滤明显小图（宽度 < MIN_IMAGE_WIDTH px）
+            try:
+                width = int(img.get('width', 0))
+                if 0 < width < MIN_IMAGE_WIDTH:
+                    continue
+            except (ValueError, TypeError):
+                pass
+            images.append(src)
+        return images
+    except Exception:
+        return []
+
+
+def _make_images_absolute(html_str, base_url):
+    """将 HTML 字符串中所有 <img src="..."> 的相对 URL 替换为绝对 URL。"""
+    def _replace(m):
+        abs_src = urljoin(base_url, m.group(2))
+        return m.group(1) + abs_src + m.group(3)
+    return _IMG_SRC_ATTR_RE.sub(_replace, html_str)
 
 
 class CustomTreeBuilder(bs4.builder._lxml.LXMLTreeBuilder):
@@ -350,45 +457,8 @@ def get_best_node(html, threshold=5):
     return best
 
 
-def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=False, threshold=5, xpath=None):
-    " Input a raw html string, returns a raw html string of the article "
-
-    # ── Hybrid 提取策略 ──────────────────────────────────────────────────────────
-    # 第一步：尝试使用 trafilatura 作为主提取引擎
-    #   - trafilatura 对现代 SPA / React / Tailwind 页面成功率更高
-    #   - 仅在非调试、非自定义 xpath 模式下启用（xpath 模式由调用方精确指定节点）
-    #   - 若 trafilatura 不可用、抛出异常、或结果过短（< 200 字符），
-    #     则无缝回退到原有 readabilite 算法，保证函数永不因此崩溃
-    if TRAFILATURA_AVAILABLE and not debug and xpath is None:
-        try:
-            # 将输入数据统一转为字符串，trafilatura 不接受 bytes 时会自动处理编码
-            if isinstance(data, bytes):
-                html_str = data.decode(encoding_in or 'utf-8', errors='replace')
-            else:
-                html_str = data
-
-            trafilatura_result = trafilatura.extract(
-                html_str,
-                url=url,
-                include_comments=False,
-                include_formatting=True,
-                output_format='html',
-                favor_recall=True,
-            )
-
-            # 结果长度充足时直接返回，避免运行原有算法的额外开销
-            if trafilatura_result and len(trafilatura_result) >= MIN_TRAFILATURA_RESULT_LENGTH:
-                if encoding_out == 'unicode':
-                    return trafilatura_result
-                else:
-                    return trafilatura_result.encode(encoding_out)
-        except Exception:
-            # 在 Vercel serverless 环境中，trafilatura 的任何异常（网络、解析、内部错误等）
-            # 都必须被捕获，以确保整个函数不会因此崩溃；回退到原有算法作为兜底
-            pass
-    # ────────────────────────────────────────────────────────────────────────────
-
-    # 第二步（兜底）：原有 readabilite 启发式算法
+def _get_article_readabilite(data, url=None, encoding_in=None, encoding_out='unicode', debug=False, threshold=5, xpath=None):
+    """原有 readabilite 启发式算法，返回 unicode 字符串或 None。"""
     html = parse(data, encoding_in)
 
     if xpath is not None:
@@ -404,7 +474,6 @@ def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=
         best = get_best_node(html, threshold)
 
     if best is None:
-        # if threshold not met
         return None
 
     # clean up
@@ -423,7 +492,130 @@ def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=
     if url:
         best.make_links_absolute(url)
 
-    return lxml.etree.tostring(best if not debug else html, method='html', encoding=encoding_out)
+    raw = lxml.etree.tostring(best if not debug else html, method='html', encoding='unicode')
+    return raw
+
+
+def _get_article_data(data, url=None, encoding_in=None, debug=False, threshold=5, xpath=None):
+    """内部使用的文章提取函数，返回包含正文和图片信息的字典。
+
+    Returns:
+        dict with keys:
+            'content'    : 提取到的 HTML 字符串（unicode），失败时为 None
+            'main_image' : 主图片 URL（og:image 优先），无则为 None
+            'images'     : 正文中所有图片的绝对 URL 列表
+    """
+    # 统一转换为字符串
+    if isinstance(data, (bytes, bytearray)):
+        html_str = data.decode(encoding_in or 'utf-8', errors='replace')
+    else:
+        html_str = data
+
+    # 优先从原始页面中提取 og:image
+    main_image = _get_og_image(html_str, url)
+    content_html = None
+    images = []
+
+    # ── 第一步：尝试 trafilatura（仅在非调试、非自定义 xpath 模式下）────────────
+    if TRAFILATURA_AVAILABLE and not debug and xpath is None:
+        try:
+            trafilatura_result = trafilatura.extract(
+                html_str,
+                url=url,
+                include_comments=False,
+                include_formatting=True,
+                include_images=True,
+                output_format='html',
+                favor_recall=True,
+            )
+
+            if trafilatura_result and len(trafilatura_result) >= PHOTO_PAGE_THRESHOLD:
+                # 结果足够丰富：转换 <graphic> → <img>，提取图片列表
+                content_html = _convert_graphic_to_img(trafilatura_result)
+                images = _extract_image_srcs(content_html, url)
+                if not main_image and images:
+                    main_image = images[0]
+
+            else:
+                # 结果过短（图片为主页面）：切换图片提取模式
+                # 先尝试 trafilatura JSON 格式（text 字段包含 Markdown 图片引用）
+                try:
+                    json_result = trafilatura.extract(
+                        html_str,
+                        url=url,
+                        include_images=True,
+                        output_format='json',
+                        include_formatting=True,
+                        favor_recall=True,
+                    )
+                    if json_result:
+                        json_data = json.loads(json_result)
+                        md_srcs = _MARKDOWN_IMAGE_RE.findall(json_data.get('text', ''))
+                        images = [
+                            urljoin(url, src) if url else src
+                            for src in md_srcs
+                            if _is_valid_image_src(src)
+                        ]
+                except Exception:
+                    pass
+
+                # 若 JSON 方式未找到图片，回退到 BeautifulSoup 解析原始 HTML
+                if not images:
+                    images = _extract_images_bs4(html_str, url)
+
+                if images:
+                    if not main_image:
+                        main_image = images[0]
+                    # 生成以图片为主的简单 HTML（URL 转义防止 XSS）
+                    content_html = '\n'.join(
+                        '<p><img src="{}" alt=""/></p>'.format(_html_module.escape(img, quote=True))
+                        for img in images
+                    )
+                elif trafilatura_result:
+                    # 有短结果但无图：保留短结果
+                    content_html = _convert_graphic_to_img(trafilatura_result)
+
+        except Exception:
+            # trafilatura 任何异常都回退到 readabilite，保证函数不崩溃
+            pass
+    # ────────────────────────────────────────────────────────────────────────────
+
+    # ── 第二步（兜底）：原有 readabilite 启发式算法 ──────────────────────────────
+    if content_html is None:
+        content_html = _get_article_readabilite(
+            data, url=url, encoding_in=encoding_in, debug=debug,
+            threshold=threshold, xpath=xpath,
+        )
+        if content_html:
+            # 从 readabilite 结果中补充图片列表
+            images = _extract_image_srcs(content_html, url)
+            if not main_image and images:
+                main_image = images[0]
+    # ────────────────────────────────────────────────────────────────────────────
+
+    # 确保正文中所有图片 src 为绝对 URL
+    if content_html and url:
+        content_html = _make_images_absolute(content_html, url)
+
+    return {'content': content_html, 'main_image': main_image, 'images': images}
+
+
+def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=False, threshold=5, xpath=None):
+    " Input a raw html string, returns a raw html string of the article "
+
+    result = _get_article_data(
+        data, url=url, encoding_in=encoding_in, debug=debug,
+        threshold=threshold, xpath=xpath,
+    )
+    content = result['content']
+
+    if content is None:
+        return None
+
+    if encoding_out == 'unicode':
+        return content
+    else:
+        return content.encode(encoding_out)
 
 
 def get_article_trafilatura_only(data, url=None, encoding_in=None):
