@@ -22,6 +22,16 @@ import lxml.etree
 import lxml.html
 import lxml.html.soupparser
 
+# 尝试导入 trafilatura 作为主提取引擎；若未安装则退回原有算法
+try:
+    import trafilatura
+    TRAFILATURA_AVAILABLE = True
+except ImportError:
+    TRAFILATURA_AVAILABLE = False
+
+# trafilatura 提取结果的最短有效长度（字符数）；低于此值视为提取失败，回退到原有算法
+MIN_TRAFILATURA_RESULT_LENGTH = 200
+
 
 class CustomTreeBuilder(bs4.builder._lxml.LXMLTreeBuilder):
     def default_parser(self, encoding):
@@ -343,6 +353,42 @@ def get_best_node(html, threshold=5):
 def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=False, threshold=5, xpath=None):
     " Input a raw html string, returns a raw html string of the article "
 
+    # ── Hybrid 提取策略 ──────────────────────────────────────────────────────────
+    # 第一步：尝试使用 trafilatura 作为主提取引擎
+    #   - trafilatura 对现代 SPA / React / Tailwind 页面成功率更高
+    #   - 仅在非调试、非自定义 xpath 模式下启用（xpath 模式由调用方精确指定节点）
+    #   - 若 trafilatura 不可用、抛出异常、或结果过短（< 200 字符），
+    #     则无缝回退到原有 readabilite 算法，保证函数永不因此崩溃
+    if TRAFILATURA_AVAILABLE and not debug and xpath is None:
+        try:
+            # 将输入数据统一转为字符串，trafilatura 不接受 bytes 时会自动处理编码
+            if isinstance(data, bytes):
+                html_str = data.decode(encoding_in or 'utf-8', errors='replace')
+            else:
+                html_str = data
+
+            trafilatura_result = trafilatura.extract(
+                html_str,
+                url=url,
+                include_comments=False,
+                include_formatting=True,
+                output_format='html',
+                favor_recall=True,
+            )
+
+            # 结果长度充足时直接返回，避免运行原有算法的额外开销
+            if trafilatura_result and len(trafilatura_result) >= MIN_TRAFILATURA_RESULT_LENGTH:
+                if encoding_out == 'unicode':
+                    return trafilatura_result
+                else:
+                    return trafilatura_result.encode(encoding_out)
+        except Exception:
+            # 在 Vercel serverless 环境中，trafilatura 的任何异常（网络、解析、内部错误等）
+            # 都必须被捕获，以确保整个函数不会因此崩溃；回退到原有算法作为兜底
+            pass
+    # ────────────────────────────────────────────────────────────────────────────
+
+    # 第二步（兜底）：原有 readabilite 启发式算法
     html = parse(data, encoding_in)
 
     if xpath is not None:
@@ -378,6 +424,24 @@ def get_article(data, url=None, encoding_in=None, encoding_out='unicode', debug=
         best.make_links_absolute(url)
 
     return lxml.etree.tostring(best if not debug else html, method='html', encoding=encoding_out)
+
+
+def get_article_trafilatura_only(data, url=None, encoding_in=None):
+    """仅使用 trafilatura 提取正文，供调试对比使用（不影响生产逻辑）。"""
+    if not TRAFILATURA_AVAILABLE:
+        return None
+    if isinstance(data, bytes):
+        html_str = data.decode(encoding_in or 'utf-8', errors='replace')
+    else:
+        html_str = data
+    return trafilatura.extract(
+        html_str,
+        url=url,
+        include_comments=False,
+        include_formatting=True,
+        output_format='html',
+        favor_recall=True,
+    )
 
 
 if __name__ == '__main__':
